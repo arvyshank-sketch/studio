@@ -145,7 +145,7 @@ export default function JournalPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Study Time</FormLabel>
-                     <Select onValueChange={field.onChange} value={String(field.value)}>
+                     <Select onValueChange={(value) => field.onChange(Number(value))} value={String(field.value)}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select study duration" />
@@ -171,7 +171,7 @@ export default function JournalPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Quran Reading</FormLabel>
-                     <Select onValueChange={field.onChange} value={String(field.value)}>
+                     <Select onValueChange={(value) => field.onChange(Number(value))} value={String(field.value)}>
                         <FormControl>
                             <SelectTrigger>
                                 <SelectValue placeholder="Select pages read" />
