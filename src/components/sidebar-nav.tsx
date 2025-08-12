@@ -10,6 +10,8 @@ import {
   Utensils,
   DollarSign,
   PlusCircle,
+  TrendingUp,
+  Sparkles,
 } from 'lucide-react';
 
 import {
@@ -61,6 +63,21 @@ const links: NavLink[] = [
     label: 'Daily Journal',
     icon: BookMarked,
   },
+  {
+    href: '/weight',
+    label: 'Weight Tracking',
+    icon: TrendingUp,
+  },
+  {
+    href: '/diet',
+    label: 'Diet & Calories',
+    icon: Utensils,
+  },
+  {
+    href: '/progress',
+    label: 'AI Analysis',
+    icon: Sparkles,
+  },
 ];
 
 const mealSchema = z.object({
@@ -76,7 +93,7 @@ type ExpenseFormValues = z.infer<typeof expenseSchema>;
 
 export function SidebarNav() {
   const pathname = usePathname();
-  const [journalEntries] = useSyncedLocalStorage<JournalEntry[]>(JOURNAL_STORAGE_KEY, []);
+  const [journalEntries, setJournalEntries] = useSyncedLocalStorage<JournalEntry[]>(JOURNAL_STORAGE_KEY, []);
   const [mealEntries, setMealEntries] = useSyncedLocalStorage<MealEntry[]>(MEALS_STORAGE_KEY, []);
   const [isClient, setIsClient] = useState(false);
   const { toast } = useToast();
@@ -121,22 +138,25 @@ export function SidebarNav() {
   };
   
   const onExpenseSubmit: SubmitHandler<ExpenseFormValues> = (data) => {
-    const existingEntryIndex = journalEntries.findIndex(e => e.date === today);
-    if (existingEntryIndex > -1) {
-      const updatedEntries = [...journalEntries];
-      updatedEntries[existingEntryIndex] = { ...updatedEntries[existingEntryIndex], expenses: (updatedEntries[existingEntryIndex].expenses || 0) + data.expenses };
-      setJournalEntries(updatedEntries);
-    } else {
-      const newEntry: JournalEntry = {
-        date: today,
-        expenses: data.expenses,
-        abstained: false,
-        quranPages: 0,
-        studyHours: 0,
-        streak: 0,
-      };
-      setJournalEntries(prev => [...prev, newEntry]);
-    }
+    setJournalEntries((prev) => {
+      const existingIndex = prev.findIndex(e => e.date === today);
+      if (existingIndex > -1) {
+        const updatedEntries = [...prev];
+        updatedEntries[existingIndex] = { ...updatedEntries[existingIndex], expenses: (updatedEntries[existingIndex].expenses || 0) + data.expenses };
+        return updatedEntries
+      } else {
+        const newEntry: JournalEntry = {
+          date: today,
+          expenses: data.expenses,
+          abstained: false,
+          quranPages: 0,
+          studyHours: 0,
+          streak: 0,
+        };
+        return [...prev, newEntry];
+      }
+    });
+
     toast({ title: 'Expense Added', description: `$${data.expenses} has been added.` });
     expenseForm.reset();
     setExpenseFormOpen(false);
@@ -167,98 +187,6 @@ export function SidebarNav() {
             </SidebarMenuItem>
           ))}
         </SidebarMenu>
-        
-        <SidebarSeparator />
-
-        <div className="flex flex-col gap-4 p-2 text-sm text-sidebar-foreground/80 group-data-[collapsible=icon]:hidden">
-            <div className='font-semibold text-sidebar-foreground'>Today's Stats</div>
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <Flame className="size-4" />
-                    <span>Streak</span>
-                </div>
-                <span>{isClient ? currentStreak : 0} days</span>
-            </div>
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <Utensils className="size-4" />
-                    <span>Calories</span>
-                </div>
-                <span>{isClient ? totalCalories : 0} kcal</span>
-            </div>
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <DollarSign className="size-4" />
-                    <span>Expenses</span>
-                </div>
-                <span>${isClient ? totalExpenses.toFixed(2) : '0.00'}</span>
-            </div>
-        </div>
-
-        <SidebarSeparator />
-
-        <div className="p-2 group-data-[collapsible=icon]:hidden">
-             <Dialog open={mealFormOpen} onOpenChange={setMealFormOpen}>
-                <DialogTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-sidebar-foreground/80 bg-sidebar-accent/30 border-sidebar-border hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-                        <PlusCircle className="mr-2 size-4" /> Add Meal
-                    </Button>
-                </DialogTrigger>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Add a New Meal</DialogTitle>
-                        <DialogDescription>Log a meal to track your calorie intake.</DialogDescription>
-                    </DialogHeader>
-                    <Form {...mealForm}>
-                        <form onSubmit={mealForm.handleSubmit(onMealSubmit)} className="space-y-4">
-                            <FormField control={mealForm.control} name="name" render={({field}) => (
-                                <FormItem>
-                                    <FormLabel>Meal Name</FormLabel>
-                                    <FormControl><Input {...field} placeholder="e.g. Protein Shake" /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
-                            <FormField control={mealForm.control} name="calories" render={({field}) => (
-                                <FormItem>
-                                    <FormLabel>Calories</FormLabel>
-                                    <FormControl><Input {...field} type="number" placeholder="e.g. 300" /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
-                            <Button type="submit" className="w-full">Save Meal</Button>
-                        </form>
-                    </Form>
-                </DialogContent>
-            </Dialog>
-        </div>
-        <div className="p-2 pt-0 group-data-[collapsible=icon]:hidden">
-             <Dialog open={expenseFormOpen} onOpenChange={setExpenseFormOpen}>
-                <DialogTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-sidebar-foreground/80 bg-sidebar-accent/30 border-sidebar-border hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-                        <PlusCircle className="mr-2 size-4" /> Add Expense
-                    </Button>
-                </DialogTrigger>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Add an Expense</DialogTitle>
-                        <DialogDescription>Log an expense for today.</DialogDescription>
-                    </DialogHeader>
-                    <Form {...expenseForm}>
-                        <form onSubmit={expenseForm.handleSubmit(onExpenseSubmit)} className="space-y-4">
-                            <FormField control={expenseForm.control} name="expenses" render={({field}) => (
-                                <FormItem>
-                                    <FormLabel>Amount</FormLabel>
-                                    <FormControl><Input {...field} type="number" placeholder="e.g. 12.50" /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
-                            <Button type="submit" className="w-full">Save Expense</Button>
-                        </form>
-                    </Form>
-                </DialogContent>
-            </Dialog>
-        </div>
-
       </SidebarContent>
       <SidebarFooter>
         <div className="flex items-center gap-3 p-2">
