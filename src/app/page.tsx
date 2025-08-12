@@ -91,17 +91,10 @@ export default function DashboardPage() {
       return journalEntries.length > 0 || mealEntries.length > 0;
   }, [journalEntries, mealEntries]);
   
-  const currentStreak = useMemo(() => {
-    if (!isClient) return 0;
-    const today = format(new Date(), 'yyyy-MM-dd');
-    const todaysEntry = journalEntries.find(e => e.date === today);
-    return todaysEntry?.streak ?? 0;
-  }, [journalEntries, isClient]);
-
   return (
     <div className="flex flex-col gap-8 p-4 md:p-8">
       <header>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">
+        <h1 className="text-4xl font-bold tracking-tight text-foreground">
           Welcome to Synergy
         </h1>
         <p className="text-muted-foreground">Your personal dashboard for holistic growth.</p>
@@ -110,17 +103,18 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
         {featureCards.map((feature) => (
           <Link href={feature.href} key={feature.title} className="flex">
-            <Card className="flex w-full flex-col justify-between transition-all hover:shadow-lg hover:scale-[1.02]">
+            <Card className="flex w-full flex-col justify-between transition-all hover:shadow-lg hover:scale-[1.02] dark:bg-secondary dark:hover:border-primary/50">
               <CardHeader>
-                <div className="mb-4">{feature.icon}</div>
+                <div className="mb-4 flex size-12 items-center justify-center rounded-lg bg-primary/10">
+                  {feature.icon}
+                </div>
                 <CardTitle>{feature.title}</CardTitle>
                 <CardDescription>{feature.description}</CardDescription>
               </CardHeader>
               <CardContent>
-                <Button variant="ghost" className="w-full justify-start p-0 text-primary hover:bg-transparent">
-                  <span>Go to {feature.title}</span>
-                  <ArrowRight className="ml-2 size-4" />
-                </Button>
+                 <span className="text-sm font-medium text-primary">
+                    Go to {feature.title} <ArrowRight className="ml-1 inline size-4" />
+                 </span>
               </CardContent>
             </Card>
           </Link>
@@ -128,7 +122,7 @@ export default function DashboardPage() {
       </div>
       
       <div className="mt-2">
-        <Card>
+        <Card className="dark:bg-secondary">
             <CardHeader>
                 <CardTitle>Weekly Review</CardTitle>
                 <CardDescription>

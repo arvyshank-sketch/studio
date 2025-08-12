@@ -77,6 +77,7 @@ export function SidebarNav() {
                 <SidebarMenuButton
                   isActive={pathname === link.href}
                   tooltip={link.label}
+                  variant="ghost"
                 >
                   <link.icon className="shrink-0" />
                   <span className="truncate">{link.label}</span>
