@@ -59,11 +59,6 @@ const links: NavLink[] = [
     icon: LayoutDashboard,
   },
   {
-    href: '/journal',
-    label: 'Daily Journal',
-    icon: BookMarked,
-  },
-  {
     href: '/weight',
     label: 'Weight Tracking',
     icon: TrendingUp,
@@ -171,6 +166,108 @@ export function SidebarNav() {
         </Link>
       </SidebarHeader>
       <SidebarContent>
+        <div className="mb-4 flex flex-col gap-2 px-2 group-data-[collapsible=icon]:hidden">
+            <div className="flex items-center justify-between rounded-lg bg-sidebar-accent/50 p-3">
+              <div className="flex items-center gap-2">
+                <Flame className="size-5 text-sidebar-accent-foreground" />
+                <span className="text-sm font-medium text-sidebar-accent-foreground">Streak</span>
+              </div>
+              <span className="text-sm font-bold text-sidebar-accent-foreground">{isClient ? currentStreak : 0} days</span>
+            </div>
+             <div className="flex items-center justify-between rounded-lg bg-sidebar-accent/50 p-3">
+              <div className="flex items-center gap-2">
+                <Utensils className="size-5 text-sidebar-accent-foreground" />
+                <span className="text-sm font-medium text-sidebar-accent-foreground">Calories</span>
+              </div>
+              <span className="text-sm font-bold text-sidebar-accent-foreground">{isClient ? totalCalories : 0}</span>
+            </div>
+             <div className="flex items-center justify-between rounded-lg bg-sidebar-accent/50 p-3">
+              <div className="flex items-center gap-2">
+                <DollarSign className="size-5 text-sidebar-accent-foreground" />
+                <span className="text-sm font-medium text-sidebar-accent-foreground">Expenses</span>
+              </div>
+              <span className="text-sm font-bold text-sidebar-accent-foreground">${isClient ? totalExpenses.toFixed(2) : '0.00'}</span>
+            </div>
+          </div>
+          
+           <div className="mb-4 flex flex-col gap-2 px-2 group-data-[collapsible=icon]:hidden">
+             <Dialog open={mealFormOpen} onOpenChange={setMealFormOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="w-full justify-start gap-2 bg-transparent text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                  <PlusCircle /> Add Meal
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add a New Meal</DialogTitle>
+                   <DialogDescription>
+                    Quickly log a meal and its calories to your daily diet.
+                  </DialogDescription>
+                </DialogHeader>
+                 <Form {...mealForm}>
+                  <form onSubmit={mealForm.handleSubmit(onMealSubmit)} className="space-y-4">
+                     <FormField
+                      control={mealForm.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Meal Name</FormLabel>
+                          <FormControl><Input placeholder="e.g., Protein Shake" {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                     <FormField
+                      control={mealForm.control}
+                      name="calories"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Calories</FormLabel>
+                          <FormControl><Input type="number" placeholder="e.g., 250" {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button type="submit" className="w-full">Add Meal</Button>
+                  </form>
+                 </Form>
+              </DialogContent>
+            </Dialog>
+
+             <Dialog open={expenseFormOpen} onOpenChange={setExpenseFormOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="w-full justify-start gap-2 bg-transparent text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                  <PlusCircle /> Add Expense
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add an Expense</DialogTitle>
+                  <DialogDescription>
+                    Log a new financial expense for today.
+                  </DialogDescription>
+                </DialogHeader>
+                <Form {...expenseForm}>
+                    <form onSubmit={expenseForm.handleSubmit(onExpenseSubmit)} className="space-y-4">
+                        <FormField
+                            control={expenseForm.control}
+                            name="expenses"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Amount</FormLabel>
+                                    <FormControl><Input type="number" step="0.01" placeholder="e.g., 12.50" {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <Button type="submit" className="w-full">Add Expense</Button>
+                    </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
+
+           </div>
+          <SidebarSeparator />
         <SidebarMenu>
           {links.map((link) => (
             <SidebarMenuItem key={link.href}>
@@ -178,7 +275,6 @@ export function SidebarNav() {
                 <SidebarMenuButton
                   isActive={pathname === link.href}
                   tooltip={link.label}
-                  variant="ghost"
                 >
                   <link.icon className="shrink-0" />
                   <span className="truncate">{link.label}</span>
