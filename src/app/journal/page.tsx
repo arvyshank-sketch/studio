@@ -162,9 +162,9 @@ export default function JournalPage() {
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                       <div className="space-y-0.5">
-                        <FormLabel>Porn & Masturbation Abstinence</FormLabel>
+                        <FormLabel>Self-Discipline</FormLabel>
                         <FormDescription>
-                          Did you abstain today?
+                          Did you stay committed today?
                         </FormDescription>
                       </div>
                       <FormControl>
