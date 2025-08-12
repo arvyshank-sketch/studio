@@ -26,6 +26,7 @@ export type JournalEntry = {
   quranPages: number;
   expenses: number;
   abstained: boolean;
+  streak: number; // Current streak count
 };
 
 export type ProgressEntry = {

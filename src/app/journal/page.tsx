@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { format } from 'date-fns';
+import { format, subDays, isToday, parseISO } from 'date-fns';
 import {
   Card,
   CardContent,
@@ -33,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Flame } from 'lucide-react';
 
 const journalSchema = z.object({
   studyHours: z.coerce.number().min(0),
@@ -73,6 +74,7 @@ export default function JournalPage() {
   }, [entries, isClient]);
 
   const today = useMemo(() => isClient ? format(new Date(), 'yyyy-MM-dd') : '', [isClient]);
+  const yesterday = useMemo(() => isClient ? format(subDays(new Date(), 1), 'yyyy-MM-dd') : '', [isClient]);
 
   const form = useForm<JournalFormValues>({
     resolver: zodResolver(journalSchema),
@@ -84,9 +86,12 @@ export default function JournalPage() {
     },
   });
 
+  const todaysEntry = useMemo(() => entries.find(e => e.date === today), [entries, today]);
+  const yesterdaysEntry = useMemo(() => entries.find(e => e.date === yesterday), [entries, yesterday]);
+  const currentStreak = useMemo(() => todaysEntry?.streak ?? 0, [todaysEntry]);
+
   useEffect(() => {
     if (isClient) {
-        const todaysEntry = entries.find(e => e.date === today);
         if (todaysEntry) {
             form.reset(todaysEntry);
         } else {
@@ -98,12 +103,20 @@ export default function JournalPage() {
             });
         }
     }
-  }, [today, entries, form, isClient]);
+  }, [today, entries, form, isClient, todaysEntry]);
 
 
   const onSubmit: SubmitHandler<JournalFormValues> = (data) => {
     setEntries((prev) => {
-      const newEntry = { date: today, ...data };
+      let newStreak = 0;
+      if (data.abstained) {
+        // If abstained today, continue or start streak
+        const yesterdayStreak = yesterdaysEntry?.abstained ? (yesterdaysEntry.streak || 0) : 0;
+        newStreak = yesterdayStreak + 1;
+      }
+      
+      const newEntry = { date: today, ...data, streak: newStreak };
+
       const existingIndex = prev.findIndex((e) => e.date === today);
       if (existingIndex > -1) {
         const updatedEntries = [...prev];
@@ -125,9 +138,24 @@ export default function JournalPage() {
           Daily Journal
         </h1>
         <p className="text-muted-foreground">
-          Log your daily activities and expenses.
+          Log your daily activities, expenses, and track your self-discipline.
         </p>
       </header>
+      
+       <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Current Streak</CardTitle>
+            <Flame className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{isClient ? currentStreak : 0} days</div>
+            <p className="text-xs text-muted-foreground">
+              {isClient && !todaysEntry?.abstained && currentStreak > 0 ? "Streak broken. Keep going!" : "Keep the fire burning!"}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
       <Card className="mx-auto max-w-2xl">
         <CardHeader>
@@ -139,6 +167,29 @@ export default function JournalPage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+               <FormField
+                control={form.control}
+                name="abstained"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border bg-card p-4 shadow-sm">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>
+                        Practiced Self-Discipline
+                      </FormLabel>
+                      <FormDescription>
+                        Check this box if you successfully practiced self-discipline today.
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={form.control}
                 name="studyHours"
@@ -207,29 +258,6 @@ export default function JournalPage() {
                       Log the total amount you spent today.
                     </FormDescription>
                     <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="abstained"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel>
-                        Practiced Self-Discipline
-                      </FormLabel>
-                      <FormDescription>
-                        Did you practice self-discipline and abstain from your defined challenges?
-                      </FormDescription>
-                    </div>
                   </FormItem>
                 )}
               />

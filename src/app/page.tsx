@@ -9,7 +9,7 @@ import {
   CardContent,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, BookOpen, BookMarked, DollarSign, Sparkles, TrendingUp, UtensilsCrossed, CheckSquare } from 'lucide-react';
+import { ArrowRight, BookOpen, BookMarked, DollarSign, Sparkles, TrendingUp, UtensilsCrossed, Flame } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import type { MealEntry, JournalEntry } from '@/lib/types';
 import { format, parseISO, subDays } from 'date-fns';
@@ -90,6 +90,13 @@ export default function DashboardPage() {
   const hasData = useMemo(() => {
       return journalEntries.length > 0 || mealEntries.length > 0;
   }, [journalEntries, mealEntries]);
+  
+  const currentStreak = useMemo(() => {
+    if (!isClient) return 0;
+    const today = format(new Date(), 'yyyy-MM-dd');
+    const todaysEntry = journalEntries.find(e => e.date === today);
+    return todaysEntry?.streak ?? 0;
+  }, [journalEntries, isClient]);
 
   return (
     <div className="flex flex-col gap-8 p-4 md:p-8">
@@ -99,6 +106,21 @@ export default function DashboardPage() {
         </h1>
         <p className="text-muted-foreground">Your personal dashboard for holistic growth.</p>
       </header>
+      
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Current Streak</CardTitle>
+            <Flame className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{currentStreak} days</div>
+            <p className="text-xs text-muted-foreground">
+              Keep up the great work!
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
         {featureCards.map((feature) => (
