@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import {
   Card,
@@ -7,7 +9,13 @@ import {
   CardContent,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, BookMarked, Sparkles, TrendingUp, UtensilsCrossed } from 'lucide-react';
+import { ArrowRight, BookOpen, BookMarked, DollarSign, Sparkles, TrendingUp, UtensilsCrossed } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import type { JournalEntry } from '@/lib/types';
+import { format, parseISO, subDays } from 'date-fns';
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 
 const featureCards = [
   {
@@ -36,7 +44,41 @@ const featureCards = [
   },
 ];
 
+const JOURNAL_STORAGE_KEY = 'synergy-journal-history';
+
 export default function DashboardPage() {
+  const [isClient, setIsClient] = useState(false);
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
+
+  useEffect(() => {
+    setIsClient(true);
+    try {
+      const storedEntries = localStorage.getItem(JOURNAL_STORAGE_KEY);
+      if (storedEntries) {
+        setJournalEntries(JSON.parse(storedEntries));
+      }
+    } catch (error) {
+      console.error('Failed to load journal entries from local storage', error);
+    }
+  }, []);
+
+  const last7DaysData = useMemo(() => {
+    if (!isClient) return [];
+    const today = new Date();
+    const last7Days = Array.from({ length: 7 }, (_, i) => subDays(today, i)).reverse();
+    
+    return last7Days.map(date => {
+        const dateString = format(date, 'yyyy-MM-dd');
+        const entry = journalEntries.find(e => e.date === dateString);
+        return {
+            date: dateString,
+            studyHours: entry?.studyHours || 0,
+            quranPages: entry?.quranPages || 0,
+            expenses: entry?.expenses || 0,
+        };
+    });
+  }, [journalEntries, isClient]);
+
   return (
     <div className="flex flex-col gap-8 p-4 md:p-8">
       <header>
@@ -65,6 +107,87 @@ export default function DashboardPage() {
           </Link>
         ))}
       </div>
+      
+      <div className="mt-2">
+        <Card>
+            <CardHeader>
+                <CardTitle>Weekly Review</CardTitle>
+                <CardDescription>
+                    Your journal progress from the last 7 days.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isClient && journalEntries.length > 0 ? (
+                <Tabs defaultValue="study">
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="study">Study</TabsTrigger>
+                    <TabsTrigger value="quran">Quran</TabsTrigger>
+                    <TabsTrigger value="expenses">Expenses</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="study" className="h-[300px] w-full pr-8 pt-4">
+                     <JournalChart data={last7DaysData} dataKey="studyHours" color="hsl(var(--primary))" name="Hours Studied" icon={BookOpen} />
+                  </TabsContent>
+                   <TabsContent value="quran" className="h-[300px] w-full pr-8 pt-4">
+                      <JournalChart data={last7DaysData} dataKey="quranPages" color="hsl(var(--chart-3))" name="Pages Read" icon={BookMarked} />
+                   </TabsContent>
+                   <TabsContent value="expenses" className="h-[300px] w-full pr-8 pt-4">
+                      <JournalChart data={last7DaysData} dataKey="expenses" color="hsl(var(--chart-2))" name="Expenses" icon={DollarSign} />
+                   </TabsContent>
+                </Tabs>
+              ) : (
+                <div className="flex h-[300px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center">
+                    <TrendingUp className="mx-auto mb-4 size-12 text-muted-foreground" />
+                    <h3 className="text-lg font-semibold">Not Enough Data</h3>
+                    <p className="text-sm text-muted-foreground">
+                        Log your journal entries for a few days to see a chart of your progress.
+                    </p>
+                </div>
+              )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
+}
+
+
+function JournalChart({ data, dataKey, color, name, icon: Icon }: { data: any[], dataKey: string, color: string, name: string, icon: React.ElementType }) {
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <AreaChart data={data}>
+        <defs>
+          <linearGradient id={`color-${dataKey}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor={color} stopOpacity={0.8}/>
+            <stop offset="95%" stopColor={color} stopOpacity={0}/>
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" />
+        <XAxis
+          dataKey="date"
+          tickFormatter={(str) => format(parseISO(str), 'MMM d')}
+          stroke="hsl(var(--muted-foreground))"
+          fontSize={12}
+          tickLine={false}
+          axisLine={false}
+        />
+        <YAxis
+          stroke="hsl(var(--muted-foreground))"
+          fontSize={12}
+          tickLine={false}
+          axisLine={false}
+          domain={['dataMin', 'dataMax + 2']}
+        />
+        <Tooltip
+          contentStyle={{
+            backgroundColor: 'hsl(var(--background))',
+            border: '1px solid hsl(var(--border))',
+            borderRadius: 'var(--radius)',
+          }}
+          labelStyle={{ color: 'hsl(var(--foreground))' }}
+           formatter={(value) => [value, name]}
+        />
+        <Area type="monotone" dataKey={dataKey} stroke={color} fill={`url(#color-${dataKey})`} strokeWidth={2} name={name} />
+      </AreaChart>
+    </ResponsiveContainer>
+  )
 }

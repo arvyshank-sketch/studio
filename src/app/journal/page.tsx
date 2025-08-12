@@ -36,11 +36,12 @@ const journalSchema = z.object({
 
 type JournalFormValues = z.infer<typeof journalSchema>;
 
+const JOURNAL_STORAGE_KEY = 'synergy-journal-history';
+
 export default function JournalPage() {
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
-  const [today, setToday] = useState('');
-  const JOURNAL_STORAGE_KEY = `synergy-journal-${today}`;
+  const [entries, setEntries] = useState<JournalEntry[]>([]);
 
   const form = useForm<JournalFormValues>({
     resolver: zodResolver(journalSchema),
@@ -53,43 +54,51 @@ export default function JournalPage() {
   });
 
   useEffect(() => {
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
-    setToday(todayStr);
     setIsClient(true);
-  }, []);
+    try {
+      const storedEntries = localStorage.getItem(JOURNAL_STORAGE_KEY);
+      if (storedEntries) {
+        const parsedEntries = JSON.parse(storedEntries);
+        setEntries(parsedEntries);
+        const today = format(new Date(), 'yyyy-MM-dd');
+        const todaysEntry = parsedEntries.find((e: JournalEntry) => e.date === today);
+        if (todaysEntry) {
+          form.reset(todaysEntry);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load journal entries from local storage', error);
+    }
+  }, [form]);
   
   useEffect(() => {
-    if (isClient && today) {
+    if (isClient) {
       try {
-        const storedEntry = localStorage.getItem(JOURNAL_STORAGE_KEY);
-        if (storedEntry) {
-          const data: JournalEntry = JSON.parse(storedEntry);
-          form.reset(data);
-        }
+        localStorage.setItem(JOURNAL_STORAGE_KEY, JSON.stringify(entries));
       } catch (error) {
-        console.error('Failed to load journal entry from local storage', error);
+        console.error('Failed to save journal entries to local storage', error);
       }
     }
-  }, [isClient, today, form, JOURNAL_STORAGE_KEY]);
+  }, [entries, isClient]);
 
 
   const onSubmit: SubmitHandler<JournalFormValues> = (data) => {
-    if (!isClient || !today) return;
-    try {
-      const entryToSave: JournalEntry = { ...data, date: today };
-      localStorage.setItem(JOURNAL_STORAGE_KEY, JSON.stringify(entryToSave));
-      toast({
-        title: 'Journal Saved',
-        description: "Today's entry has been successfully saved.",
-      });
-    } catch (error) {
-      console.error('Failed to save journal entry', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Could not save your journal entry.',
-      });
-    }
+    const today = format(new Date(), 'yyyy-MM-dd');
+    setEntries((prev) => {
+      const existingIndex = prev.findIndex((e) => e.date === today);
+      const newEntry: JournalEntry = { ...data, date: today };
+      if (existingIndex > -1) {
+        const updatedEntries = [...prev];
+        updatedEntries[existingIndex] = newEntry;
+        return updatedEntries;
+      }
+      return [...prev, newEntry];
+    });
+
+    toast({
+      title: 'Journal Saved',
+      description: "Today's entry has been successfully saved.",
+    });
   };
 
   return (
@@ -108,7 +117,7 @@ export default function JournalPage() {
           <CardHeader>
             <CardTitle>Today's Entry - {isClient ? format(new Date(), 'MMMM d, yyyy') : 'Loading...'}</CardTitle>
             <CardDescription>
-              Fill in the details for your activities today.
+              Fill in the details for your activities today. Your entry will be updated if it already exists.
             </CardDescription>
           </CardHeader>
           <CardContent>
