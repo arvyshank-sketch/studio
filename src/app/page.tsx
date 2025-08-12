@@ -9,18 +9,18 @@ import {
   CardContent,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, BookOpen, BookMarked, DollarSign, Sparkles, TrendingUp, UtensilsCrossed } from 'lucide-react';
+import { ArrowRight, BookOpen, BookMarked, DollarSign, Sparkles, TrendingUp, UtensilsCrossed, CheckSquare } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
-import type { JournalEntry, MealEntry } from '@/lib/types';
+import type { MealEntry, Habit, HabitEntry } from '@/lib/types';
 import { format, parseISO, subDays } from 'date-fns';
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
 const featureCards = [
   {
-    title: 'Daily Journal',
-    description: "Track study, piety, finances, and habits.",
+    title: 'Daily Habits',
+    description: "Track your daily habits and build consistency.",
     href: '/journal',
     icon: <BookMarked className="size-8 text-primary" />,
   },
@@ -44,25 +44,28 @@ const featureCards = [
   },
 ];
 
-const JOURNAL_STORAGE_KEY = 'synergy-journal-history';
+const HABITS_STORAGE_KEY = 'synergy-habits';
+const HABIT_ENTRIES_STORAGE_KEY = 'synergy-habit-entries';
 const MEALS_STORAGE_KEY = 'synergy-meals-history';
 
 export default function DashboardPage() {
   const [isClient, setIsClient] = useState(false);
-  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
+  const [habitEntries, setHabitEntries] = useState<HabitEntry[]>([]);
   const [mealEntries, setMealEntries] = useState<MealEntry[]>([]);
+  const [habits, setHabits] = useState<Habit[]>([]);
+
 
   useEffect(() => {
     setIsClient(true);
     try {
-      const storedJournal = localStorage.getItem(JOURNAL_STORAGE_KEY);
-      if (storedJournal) {
-        setJournalEntries(JSON.parse(storedJournal));
-      }
+      const storedHabits = localStorage.getItem(HABITS_STORAGE_KEY);
+      if (storedHabits) setHabits(JSON.parse(storedHabits));
+
+      const storedHabitEntries = localStorage.getItem(HABIT_ENTRIES_STORAGE_KEY);
+      if (storedHabitEntries) setHabitEntries(JSON.parse(storedHabitEntries));
+
       const storedMeals = localStorage.getItem(MEALS_STORAGE_KEY);
-      if (storedMeals) {
-        setMealEntries(JSON.parse(storedMeals));
-      }
+      if (storedMeals) setMealEntries(JSON.parse(storedMeals));
     } catch (error) {
       console.error('Failed to load entries from local storage', error);
     }
@@ -75,23 +78,25 @@ export default function DashboardPage() {
     
     return last7Days.map(date => {
         const dateString = format(date, 'yyyy-MM-dd');
-        const journalEntry = journalEntries.find(e => e.date === dateString);
+        
+        const habitEntry = habitEntries.find(e => e.date === dateString);
+        const completedCount = habitEntry?.completedHabitIds.length || 0;
+        const completionRate = habits.length > 0 ? (completedCount / habits.length) * 100 : 0;
+        
         const mealsForDay = mealEntries.filter(m => m.date === dateString);
         const totalCalories = mealsForDay.reduce((sum, meal) => sum + meal.calories, 0);
 
         return {
             date: dateString,
-            studyHours: journalEntry?.studyHours || 0,
-            quranPages: journalEntry?.quranPages || 0,
-            expenses: journalEntry?.expenses || 0,
             calories: totalCalories,
+            habitCompletion: completionRate
         };
     });
-  }, [journalEntries, mealEntries, isClient]);
+  }, [habitEntries, mealEntries, habits, isClient]);
 
   const hasData = useMemo(() => {
-      return journalEntries.length > 0 || mealEntries.length > 0;
-  }, [journalEntries, mealEntries]);
+      return habitEntries.length > 0 || mealEntries.length > 0;
+  }, [habitEntries, mealEntries]);
 
   return (
     <div className="flex flex-col gap-8 p-4 md:p-8">
@@ -127,37 +132,29 @@ export default function DashboardPage() {
             <CardHeader>
                 <CardTitle>Weekly Review</CardTitle>
                 <CardDescription>
-                    Your journal and diet progress from the last 7 days.
+                    Your habit and diet progress from the last 7 days.
                 </CardDescription>
             </CardHeader>
             <CardContent>
               {isClient && hasData ? (
-                <Tabs defaultValue="study">
-                  <TabsList className="grid w-full grid-cols-4">
-                    <TabsTrigger value="study">Study</TabsTrigger>
-                    <TabsTrigger value="quran">Quran</TabsTrigger>
-                    <TabsTrigger value="expenses">Expenses</TabsTrigger>
+                <Tabs defaultValue="habits">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="habits">Habits</TabsTrigger>
                     <TabsTrigger value="calories">Calories</TabsTrigger>
                   </TabsList>
-                  <TabsContent value="study" className="h-[300px] w-full pr-8 pt-4">
-                     <JournalChart data={last7DaysData} dataKey="studyHours" color="hsl(var(--primary))" name="Hours Studied" icon={BookOpen} />
+                  <TabsContent value="habits" className="h-[300px] w-full pr-8 pt-4">
+                     <WeeklyChart data={last7DaysData} dataKey="habitCompletion" color="hsl(var(--primary))" name="Completion" unit="%" icon={CheckSquare} />
                   </TabsContent>
-                   <TabsContent value="quran" className="h-[300px] w-full pr-8 pt-4">
-                      <JournalChart data={last7DaysData} dataKey="quranPages" color="hsl(var(--chart-3))" name="Pages Read" icon={BookMarked} />
-                   </TabsContent>
-                   <TabsContent value="expenses" className="h-[300px] w-full pr-8 pt-4">
-                      <JournalChart data={last7DaysData} dataKey="expenses" color="hsl(var(--chart-2))" name="Expenses" icon={DollarSign} />
-                   </TabsContent>
-                    <TabsContent value="calories" className="h-[300px] w-full pr-8 pt-4">
-                        <JournalChart data={last7DaysData} dataKey="calories" color="hsl(var(--chart-4))" name="Calories" icon={UtensilsCrossed} />
-                    </TabsContent>
+                  <TabsContent value="calories" className="h-[300px] w-full pr-8 pt-4">
+                      <WeeklyChart data={last7DaysData} dataKey="calories" color="hsl(var(--chart-4))" name="Calories" icon={UtensilsCrossed} />
+                  </TabsContent>
                 </Tabs>
               ) : (
                 <div className="flex h-[300px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center">
                     <TrendingUp className="mx-auto mb-4 size-12 text-muted-foreground" />
                     <h3 className="text-lg font-semibold">Not Enough Data</h3>
                     <p className="text-sm text-muted-foreground">
-                        Log your journal or diet entries for a few days to see a chart of your progress.
+                        Log your habits or diet entries for a few days to see a chart of your progress.
                     </p>
                 </div>
               )}
@@ -169,16 +166,10 @@ export default function DashboardPage() {
 }
 
 
-function JournalChart({ data, dataKey, color, name, icon: Icon }: { data: any[], dataKey: string, color: string, name: string, icon: React.ElementType }) {
+function WeeklyChart({ data, dataKey, color, name, icon: Icon, unit = '' }: { data: any[], dataKey: string, color: string, name: string, icon: React.ElementType, unit?: string }) {
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <AreaChart data={data}>
-        <defs>
-          <linearGradient id={`color-${dataKey}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor={color} stopOpacity={0.8}/>
-            <stop offset="95%" stopColor={color} stopOpacity={0}/>
-          </linearGradient>
-        </defs>
+      <BarChart data={data}>
         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" />
         <XAxis
           dataKey="date"
@@ -193,7 +184,7 @@ function JournalChart({ data, dataKey, color, name, icon: Icon }: { data: any[],
           fontSize={12}
           tickLine={false}
           axisLine={false}
-          domain={['dataMin', `dataMax + ${dataKey === 'calories' ? 100 : 2}`]}
+          tickFormatter={(val) => `${val}${unit}`}
         />
         <Tooltip
           contentStyle={{
@@ -202,10 +193,10 @@ function JournalChart({ data, dataKey, color, name, icon: Icon }: { data: any[],
             borderRadius: 'var(--radius)',
           }}
           labelStyle={{ color: 'hsl(var(--foreground))' }}
-           formatter={(value) => [value, name]}
+           formatter={(value) => [`${value}${unit}`, name]}
         />
-        <Area type="monotone" dataKey={dataKey} stroke={color} fill={`url(#color-${dataKey})`} strokeWidth={2} name={name} />
-      </AreaChart>
+        <Bar dataKey={dataKey} fill={color} radius={[4, 4, 0, 0]} />
+      </BarChart>
     </ResponsiveContainer>
   )
 }

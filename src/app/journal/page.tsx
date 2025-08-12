@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { format } from 'date-fns';
 import {
   Card,
   CardContent,
@@ -15,183 +16,234 @@ import { Button } from '@/components/ui/button';
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import type { JournalEntry } from '@/lib/types';
-import { format } from 'date-fns';
+import type { Habit, HabitEntry } from '@/lib/types';
+import { Plus, Trash2, X } from 'lucide-react';
 
-const journalSchema = z.object({
-  studyHours: z.coerce.number().min(0, 'Must be a positive number'),
-  quranPages: z.coerce.number().min(0, 'Must be a positive number'),
-  expenses: z.coerce.number().min(0, 'Must be a positive number'),
-  abstained: z.boolean().default(false),
+const habitSchema = z.object({
+  name: z.string().min(1, 'Habit name is required'),
 });
 
-type JournalFormValues = z.infer<typeof journalSchema>;
+type HabitFormValues = z.infer<typeof habitSchema>;
 
-const JOURNAL_STORAGE_KEY = 'synergy-journal-history';
+const HABITS_STORAGE_KEY = 'synergy-habits';
+const HABIT_ENTRIES_STORAGE_KEY = 'synergy-habit-entries';
+
+const defaultHabits: Habit[] = [
+    { id: 1, name: 'Studied for 1+ hour' },
+    { id: 2, name: 'Read Quran' },
+    { id: 3, name: 'Tracked all expenses' },
+    { id: 4, name: 'Practiced self-discipline' },
+];
 
 export default function JournalPage() {
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
-  const [entries, setEntries] = useState<JournalEntry[]>([]);
+  const [habits, setHabits] = useState<Habit[]>([]);
+  const [entries, setEntries] = useState<HabitEntry[]>([]);
 
-  const form = useForm<JournalFormValues>({
-    resolver: zodResolver(journalSchema),
+  const form = useForm<HabitFormValues>({
+    resolver: zodResolver(habitSchema),
     defaultValues: {
-      studyHours: 0,
-      quranPages: 0,
-      expenses: 0,
-      abstained: false,
+      name: '',
     },
   });
 
   useEffect(() => {
     setIsClient(true);
     try {
-      const storedEntries = localStorage.getItem(JOURNAL_STORAGE_KEY);
+      const storedHabits = localStorage.getItem(HABITS_STORAGE_KEY);
+      if (storedHabits) {
+        setHabits(JSON.parse(storedHabits));
+      } else {
+        setHabits(defaultHabits);
+      }
+
+      const storedEntries = localStorage.getItem(HABIT_ENTRIES_STORAGE_KEY);
       if (storedEntries) {
-        const parsedEntries = JSON.parse(storedEntries);
-        setEntries(parsedEntries);
-        const today = format(new Date(), 'yyyy-MM-dd');
-        const todaysEntry = parsedEntries.find((e: JournalEntry) => e.date === today);
-        if (todaysEntry) {
-          form.reset(todaysEntry);
-        }
+        setEntries(JSON.parse(storedEntries));
       }
     } catch (error) {
-      console.error('Failed to load journal entries from local storage', error);
+      console.error('Failed to load data from local storage', error);
     }
-  }, [form]);
-  
+  }, []);
+
   useEffect(() => {
     if (isClient) {
       try {
-        localStorage.setItem(JOURNAL_STORAGE_KEY, JSON.stringify(entries));
+        localStorage.setItem(HABITS_STORAGE_KEY, JSON.stringify(habits));
+        localStorage.setItem(HABIT_ENTRIES_STORAGE_KEY, JSON.stringify(entries));
       } catch (error) {
-        console.error('Failed to save journal entries to local storage', error);
+        console.error('Failed to save data to local storage', error);
       }
     }
-  }, [entries, isClient]);
+  }, [habits, entries, isClient]);
+  
+  const today = useMemo(() => isClient ? format(new Date(), 'yyyy-MM-dd') : '', [isClient]);
 
+  const todaysCompletedHabitIds = useMemo(() => {
+    if (!isClient) return new Set();
+    const todaysEntry = entries.find(e => e.date === today);
+    return new Set(todaysEntry?.completedHabitIds || []);
+  }, [entries, today, isClient]);
 
-  const onSubmit: SubmitHandler<JournalFormValues> = (data) => {
-    const today = format(new Date(), 'yyyy-MM-dd');
-    setEntries((prev) => {
-      const existingIndex = prev.findIndex((e) => e.date === today);
-      const newEntry: JournalEntry = { ...data, date: today };
-      if (existingIndex > -1) {
+  const onAddHabit: SubmitHandler<HabitFormValues> = (data) => {
+    setHabits((prev) => [...prev, { id: Date.now(), name: data.name }]);
+    form.reset();
+  };
+
+  const deleteHabit = (id: number) => {
+    setHabits((prev) => prev.filter((habit) => habit.id !== id));
+    // Also remove completions for this habit from all entries
+    setEntries(prev => prev.map(entry => ({
+      ...entry,
+      completedHabitIds: entry.completedHabitIds.filter(habitId => habitId !== id),
+    })));
+  };
+
+  const toggleHabitCompletion = (habitId: number) => {
+    setEntries(prev => {
+      const existingEntryIndex = prev.findIndex(e => e.date === today);
+      let newCompletedIds: number[];
+
+      if (existingEntryIndex > -1) {
+        const existingEntry = prev[existingEntryIndex];
+        const completedIds = new Set(existingEntry.completedHabitIds);
+        if (completedIds.has(habitId)) {
+          completedIds.delete(habitId);
+        } else {
+          completedIds.add(habitId);
+        }
+        newCompletedIds = Array.from(completedIds);
+        
         const updatedEntries = [...prev];
-        updatedEntries[existingIndex] = newEntry;
+        updatedEntries[existingEntryIndex] = { ...existingEntry, completedHabitIds: newCompletedIds };
         return updatedEntries;
-      }
-      return [...prev, newEntry];
-    });
 
-    toast({
-      title: 'Journal Saved',
-      description: "Today's entry has been successfully saved.",
+      } else {
+        newCompletedIds = [habitId];
+        const newEntry: HabitEntry = { date: today, completedHabitIds: newCompletedIds };
+        return [...prev, newEntry];
+      }
     });
   };
+
 
   return (
     <div className="p-4 md:p-8">
       <header className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">
-          Daily Journal
+          Daily Habits
         </h1>
         <p className="text-muted-foreground">
-          Log your daily activities and habits to stay on track.
+          Check off the habits you've completed today.
         </p>
       </header>
 
-      <div className="mx-auto max-w-2xl">
+      <div className="mx-auto grid max-w-4xl gap-8 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Today's Entry - {isClient ? format(new Date(), 'MMMM d, yyyy') : 'Loading...'}</CardTitle>
+            <CardTitle>Today's Habits</CardTitle>
             <CardDescription>
-              Fill in the details for your activities today. Your entry will be updated if it already exists.
+              {isClient ? format(new Date(), 'MMMM d, yyyy') : 'Loading...'}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className="space-y-8"
-              >
-                <FormField
-                  control={form.control}
-                  name="studyHours"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Hours Studied</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="0.5" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="quranPages"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Pages of Quran Read</FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="expenses"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Financial Expenses</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="0.01" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="abstained"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel>Self-Discipline</FormLabel>
-                        <FormDescription>
-                          Did you stay committed today?
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
+            {isClient && habits.length > 0 ? (
+                <div className="space-y-4">
+                {habits.map(habit => (
+                    <div key={habit.id} className="flex items-center space-x-3 rounded-md border p-4">
+                        <Checkbox
+                            id={`habit-${habit.id}`}
+                            checked={todaysCompletedHabitIds.has(habit.id)}
+                            onCheckedChange={() => toggleHabitCompletion(habit.id)}
                         />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit" className="w-full">
-                  Save Today's Journal
-                </Button>
-              </form>
-            </Form>
+                        <label
+                            htmlFor={`habit-${habit.id}`}
+                            className="flex-1 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                            {habit.name}
+                        </label>
+                    </div>
+                ))}
+                </div>
+            ) : (
+                 <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center">
+                    <h3 className="text-lg font-semibold">No Habits Defined</h3>
+                    <p className="text-sm text-muted-foreground">
+                    Use the form on the right to add your first habit.
+                    </p>
+              </div>
+            )}
           </CardContent>
         </Card>
+        
+        <div className="space-y-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>Add a New Habit</CardTitle>
+              <CardDescription>Expand your list of daily habits.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...form}>
+                <form
+                  onSubmit={form.handleSubmit(onAddHabit)}
+                  className="flex items-start gap-4"
+                >
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem className="flex-1">
+                        <FormLabel className="sr-only">Habit Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., Meditate for 10 mins" {...field} />
+                        </FormControl>
+                        <FormMessage className="pt-2" />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" size="icon">
+                    <Plus className="size-4" />
+                    <span className="sr-only">Add Habit</span>
+                  </Button>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Manage Habits</CardTitle>
+              <CardDescription>Add or remove habits from your list.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {isClient && habits.length > 0 ? (
+                    <ul className="space-y-2">
+                    {habits.map(habit => (
+                        <li key={habit.id} className="flex items-center justify-between rounded-md border bg-muted/50 p-3 text-sm">
+                            <span className="font-medium">{habit.name}</span>
+                            <Button variant="ghost" size="icon" onClick={() => deleteHabit(habit.id)}>
+                                <X className="size-4 text-destructive" />
+                                <span className="sr-only">Delete habit</span>
+                            </Button>
+                        </li>
+                    ))}
+                    </ul>
+                ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">No habits yet.</p>
+                )}
+            </CardContent>
+          </Card>
+
+        </div>
       </div>
     </div>
   );

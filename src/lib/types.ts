@@ -10,6 +10,16 @@ export type MealEntry = {
   calories: number;
 };
 
+export type Habit = {
+  id: number;
+  name: string;
+};
+
+export type HabitEntry = {
+  date: string; // "yyyy-MM-dd"
+  completedHabitIds: number[];
+};
+
 export type JournalEntry = {
   date: string;
   studyHours: number;
