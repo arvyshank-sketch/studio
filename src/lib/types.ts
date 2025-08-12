@@ -16,3 +16,26 @@ export type JournalEntry = {
   expenses: number;
   abstained: boolean;
 };
+
+export type ProgressEntry = {
+  date: string;
+  bodyFat: number;
+  photoDataUri: string;
+  analysis: AnalyzePhysicalProgressOutput;
+};
+
+// Copied from src/ai/flows/analyze-physical-progress.ts to avoid circular dependency
+export type AnalyzePhysicalProgressOutput = {
+    physiqueAssessment: string;
+    muscleGroups: {
+        chest: string;
+        arms: string;
+        back: string;
+        abs: string;
+    };
+    areasForImprovement: string[];
+    recommendations: {
+        workout: string;
+        diet: string;
+    };
+};

@@ -1,10 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Image from 'next/image';
+import { format, parseISO } from 'date-fns';
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import {
   Card,
   CardContent,
@@ -16,51 +26,65 @@ import { Button } from '@/components/ui/button';
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { analyzePhysicalProgress, type AnalyzePhysicalProgressOutput } from '@/ai/flows/analyze-physical-progress';
-import { Upload, Sparkles, Loader2, Dumbbell, Utensils, Target } from 'lucide-react';
+import { Upload, Sparkles, Loader2, Dumbbell, Utensils, Target, TrendingUp, Percent } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import type { ProgressEntry } from '@/lib/types';
+
 
 const progressSchema = z.object({
   photo: z
     .any()
-    .refine((files) => files?.length === 1, 'Photo is required.')
-    .refine(
-      (files) => files?.[0]?.size <= 5000000,
-      `Max file size is 5MB.`
-    )
-    .refine(
-      (files) => ['image/jpeg', 'image/png', 'image/webp'].includes(files?.[0]?.type),
-      '.jpg, .png, and .webp files are accepted.'
-    ),
+    .refine((files) => files?.length === 1, 'Photo is required.'),
+  bodyFat: z.coerce.number().positive('Body fat must be a positive number').optional(),
   description: z.string().optional(),
 });
 
 type ProgressFormValues = z.infer<typeof progressSchema>;
 
-const PREVIOUS_PHOTO_KEY = 'synergy-previous-photo';
+const PROGRESS_HISTORY_KEY = 'synergy-progress-history';
 
 export default function ProgressPage() {
   const { toast } = useToast();
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<AnalyzePhysicalProgressOutput | null>(null);
+  const [history, setHistory] = useState<ProgressEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
+    try {
+      const storedHistory = localStorage.getItem(PROGRESS_HISTORY_KEY);
+      if (storedHistory) {
+        setHistory(JSON.parse(storedHistory));
+      }
+    } catch (error) {
+      console.error('Failed to load progress history from local storage', error);
+    }
   }, []);
-  
+
+  useEffect(() => {
+    if (isClient) {
+      try {
+        localStorage.setItem(PROGRESS_HISTORY_KEY, JSON.stringify(history));
+      } catch (error) {
+        console.error('Failed to save progress history to local storage', error);
+      }
+    }
+  }, [history, isClient]);
+
   const form = useForm<ProgressFormValues>({
     resolver: zodResolver(progressSchema),
   });
@@ -68,6 +92,14 @@ export default function ProgressPage() {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          variant: 'destructive',
+          title: 'File too large',
+          description: 'Please upload an image smaller than 5MB.',
+        });
+        return;
+      }
       const reader = new FileReader();
       reader.onloadend = () => {
         setPhotoPreview(reader.result as string);
@@ -90,16 +122,37 @@ export default function ProgressPage() {
     setAnalysis(null);
 
     try {
-      const previousPhotoDataUri = localStorage.getItem(PREVIOUS_PHOTO_KEY) || undefined;
+      const previousPhotoDataUri = history.length > 0 ? history[history.length - 1].photoDataUri : undefined;
 
       const result = await analyzePhysicalProgress({
         photoDataUri: photoPreview,
         previousPhotoDataUri,
+        bodyFat: data.bodyFat,
         description: data.description || 'User wants to see their physical progress.',
       });
 
       setAnalysis(result);
-      localStorage.setItem(PREVIOUS_PHOTO_KEY, photoPreview);
+      
+      if (data.bodyFat) {
+        const today = format(new Date(), 'yyyy-MM-dd');
+        const newEntry: ProgressEntry = {
+            date: today,
+            bodyFat: data.bodyFat,
+            photoDataUri: photoPreview,
+            analysis: result
+        };
+
+        setHistory(prev => {
+            const existingIndex = prev.findIndex(e => e.date === today);
+            if (existingIndex > -1) {
+                const updatedEntries = [...prev];
+                updatedEntries[existingIndex] = newEntry;
+                return updatedEntries;
+            }
+            return [...prev, newEntry];
+        });
+      }
+
       toast({
         title: 'Analysis Complete',
         description: 'Your progress analysis is ready.',
@@ -115,6 +168,10 @@ export default function ProgressPage() {
       setIsLoading(false);
     }
   };
+  
+  const sortedHistory = useMemo(() => {
+    return [...history].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [history]);
 
   return (
     <div className="p-4 md:p-8">
@@ -127,8 +184,8 @@ export default function ProgressPage() {
         </p>
       </header>
 
-      <div className="grid gap-8 md:grid-cols-2">
-        <Card>
+      <div className="grid gap-8 lg:grid-cols-3">
+        <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle>Upload Photo</CardTitle>
             <CardDescription>
@@ -180,6 +237,20 @@ export default function ProgressPage() {
 
                 <FormField
                   control={form.control}
+                  name="bodyFat"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Body Fat % (Optional)</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.1" placeholder="e.g., 15.2" {...field} />
+                      </FormControl>
+                      <FormDescription>Include body fat for a more accurate analysis and to track progress.</FormDescription>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name="description"
                   render={({ field }) => (
                     <FormItem>
@@ -208,7 +279,7 @@ export default function ProgressPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>AI Analysis</CardTitle>
             <CardDescription>
@@ -293,6 +364,66 @@ export default function ProgressPage() {
                   Your analysis will appear here after you submit a photo.
                 </p>
               </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+      
+      <div className="mt-8">
+        <Card>
+            <CardHeader>
+                <CardTitle>Body Fat Percentage Progress</CardTitle>
+                <CardDescription>
+                    Visualize your body fat changes over time.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="h-[300px] w-full pr-8">
+            {isClient && sortedHistory.length > 1 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={sortedHistory}>
+                  <defs>
+                    <linearGradient id="colorBodyFat" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(var(--accent))" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="hsl(var(--accent))" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" />
+                  <XAxis
+                    dataKey="date"
+                    tickFormatter={(str) => format(parseISO(str), 'MMM d')}
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    domain={['dataMin - 1', 'dataMax + 1']}
+                    tickFormatter={(val) => `${val}%`}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--background))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: 'var(--radius)',
+                    }}
+                    labelStyle={{ color: 'hsl(var(--foreground))' }}
+                    formatter={(value) => [`${value}%`, 'Body Fat']}
+                  />
+                  <Area type="monotone" dataKey="bodyFat" stroke="hsl(var(--accent))" fill="url(#colorBodyFat)" strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+                <div className="flex h-full flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center">
+                    <TrendingUp className="mx-auto mb-4 size-12 text-muted-foreground" />
+                    <h3 className="text-lg font-semibold">Not Enough Data</h3>
+                    <p className="text-sm text-muted-foreground">
+                        Log your body fat for a few days to see a chart of your progress.
+                    </p>
+                </div>
             )}
           </CardContent>
         </Card>
