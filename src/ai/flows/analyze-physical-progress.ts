@@ -28,7 +28,24 @@ const AnalyzePhysicalProgressInputSchema = z.object({
 export type AnalyzePhysicalProgressInput = z.infer<typeof AnalyzePhysicalProgressInputSchema>;
 
 const AnalyzePhysicalProgressOutputSchema = z.object({
-  analysis: z.string().describe('The analysis of changes in physical appearance between the photos.'),
+  physiqueAssessment: z.string().describe("The user's overall physique assessment."),
+  muscleGroups: z
+    .object({
+      chest: z.string().describe('Analysis of the chest muscles.'),
+      arms: z.string().describe('Analysis of the arm muscles (biceps, triceps).'),
+      back: z.string().describe('Analysis of the back muscles (lats, traps).'),
+      abs: z.string().describe('Analysis of the abdominal muscles.'),
+    })
+    .describe('Detailed analysis of major muscle groups.'),
+  areasForImprovement: z
+    .array(z.string())
+    .describe('A list of muscle groups or areas that need more focus.'),
+  recommendations: z
+    .object({
+      workout: z.string().describe('Actionable workout recommendations.'),
+      diet: z.string().describe('Actionable diet and nutrition recommendations.'),
+    })
+    .describe('Actionable recommendations for the user.'),
 });
 export type AnalyzePhysicalProgressOutput = z.infer<typeof AnalyzePhysicalProgressOutputSchema>;
 
@@ -40,16 +57,25 @@ const prompt = ai.definePrompt({
   name: 'analyzePhysicalProgressPrompt',
   input: {schema: AnalyzePhysicalProgressInputSchema},
   output: {schema: AnalyzePhysicalProgressOutputSchema},
-  prompt: `You are a personal trainer analyzing the physical progress of a user based on their weekly photo uploads.
+  prompt: `You are an expert personal trainer and fitness coach. Analyze the physical progress of a user based on their photo uploads and provide a detailed, encouraging, and actionable assessment.
 
-You will compare the current photo with the previous photo (if available) to identify and describe changes in their physical appearance, such as muscle mass gains or losses.
+You will compare the current photo with the previous photo (if available) to identify and describe changes in their physical appearance, such as muscle mass gains, fat loss, and definition.
 
-Description: {{{description}}}
+Description from user: {{{description}}}
 Current Photo: {{media url=photoDataUri}}
 {{#if previousPhotoDataUri}}Previous Photo: {{media url=previousPhotoDataUri}}{{/if}}
-{{#unless previousPhotoDataUri}}This is the first photo. Focus on describing the user's current physique.{{/unless}}
+{{#unless previousPhotoDataUri}}This is the first photo. Focus on describing the user's current physique and providing a baseline analysis.{{/unless}}
 
-Analyze the photos and provide a summary of the changes in physical appearance.
+Your analysis should be structured and comprehensive. Fill out all the fields in the output schema.
+
+1.  **Physique Assessment:** Provide an overall summary of the user's current physique. Note their body type (e.g., ectomorph, mesomorph) if possible.
+2.  **Muscle Groups Analysis:** Analyze each major muscle group (Chest, Arms, Back, Abs). Be specific about development, symmetry, and definition.
+3.  **Areas for Improvement:** Identify 1-3 key areas or muscle groups that would benefit most from additional focus.
+4.  **Recommendations:** Provide clear, actionable advice.
+    *   **Workout:** Suggest specific exercises or workout modifications to address the areas for improvement.
+    *   **Diet:** Offer general nutrition tips that align with gaining muscle or losing fat, based on your analysis.
+
+Maintain a positive and motivating tone throughout.
 `,
 });
 

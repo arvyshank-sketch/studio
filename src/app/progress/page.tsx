@@ -24,10 +24,12 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { analyzePhysicalProgress } from '@/ai/flows/analyze-physical-progress';
-import { Upload, Sparkles, Loader2 } from 'lucide-react';
+import { analyzePhysicalProgress, type AnalyzePhysicalProgressOutput } from '@/ai/flows/analyze-physical-progress';
+import { Upload, Sparkles, Loader2, Dumbbell, Utensils, Target } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const progressSchema = z.object({
   photo: z
@@ -51,7 +53,7 @@ const PREVIOUS_PHOTO_KEY = 'synergy-previous-photo';
 export default function ProgressPage() {
   const { toast } = useToast();
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [analysis, setAnalysis] = useState<string | null>(null);
+  const [analysis, setAnalysis] = useState<AnalyzePhysicalProgressOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
@@ -96,7 +98,7 @@ export default function ProgressPage() {
         description: data.description || 'User wants to see their physical progress.',
       });
 
-      setAnalysis(result.analysis);
+      setAnalysis(result);
       localStorage.setItem(PREVIOUS_PHOTO_KEY, photoPreview);
       toast({
         title: 'Analysis Complete',
@@ -215,14 +217,73 @@ export default function ProgressPage() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
+                <Skeleton className="h-4 w-3/4" />
                 <Skeleton className="h-4 w-full" />
                 <Skeleton className="h-4 w-full" />
                 <Skeleton className="h-4 w-4/5" />
+                 <div className="space-y-3 pt-4">
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-8 w-full" />
+                </div>
               </div>
             ) : analysis ? (
-              <div className="prose prose-sm dark:prose-invert max-w-none text-foreground">
-                <p>{analysis}</p>
+              <div className="prose prose-sm dark:prose-invert max-w-none space-y-4 text-foreground">
+                <div>
+                  <h3 className="font-semibold mb-2 text-foreground">Overall Physique</h3>
+                  <p>{analysis.physiqueAssessment}</p>
+                </div>
+                
+                <div>
+                  <h3 className="font-semibold mb-2 text-foreground">Muscle Groups</h3>
+                  <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value="chest">
+                      <AccordionTrigger>Chest</AccordionTrigger>
+                      <AccordionContent>{analysis.muscleGroups.chest}</AccordionContent>
+                    </AccordionItem>
+                     <AccordionItem value="arms">
+                      <AccordionTrigger>Arms</AccordionTrigger>
+                      <AccordionContent>{analysis.muscleGroups.arms}</AccordionContent>
+                    </AccordionItem>
+                     <AccordionItem value="back">
+                      <AccordionTrigger>Back</AccordionTrigger>
+                      <AccordionContent>{analysis.muscleGroups.back}</AccordionContent>
+                    </AccordionItem>
+                     <AccordionItem value="abs">
+                      <AccordionTrigger>Abs</AccordionTrigger>
+                      <AccordionContent>{analysis.muscleGroups.abs}</AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                </div>
+
+                <div>
+                    <h3 className="font-semibold text-foreground mb-2 flex items-center gap-2">
+                        <Target className="size-5 text-primary" />
+                        Areas for Improvement
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                        {analysis.areasForImprovement.map((area) => (
+                            <Badge key={area} variant="secondary">{area}</Badge>
+                        ))}
+                    </div>
+                </div>
+
+                <div>
+                    <h3 className="font-semibold text-foreground mb-2 flex items-center gap-2">
+                        <Dumbbell className="size-5 text-primary" />
+                        Workout Recommendations
+                    </h3>
+                    <p>{analysis.recommendations.workout}</p>
+                </div>
+
+                 <div>
+                    <h3 className="font-semibold text-foreground mb-2 flex items-center gap-2">
+                        <Utensils className="size-5 text-primary" />
+                        Diet Recommendations
+                    </h3>
+                    <p>{analysis.recommendations.diet}</p>
+                </div>
+
               </div>
             ) : (
               <div className="flex h-full min-h-[200px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center">
