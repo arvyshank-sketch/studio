@@ -162,7 +162,7 @@ export default function WeightPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="h-[300px] w-full pr-8">
-            {isClient && sortedEntries.length > 1 ? (
+            {isClient && sortedEntries.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={sortedEntries}>
                   <defs>
