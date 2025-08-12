@@ -74,6 +74,9 @@ export default function WeightPage() {
 
   const form = useForm<WeightFormValues>({
     resolver: zodResolver(weightSchema),
+    defaultValues: {
+      weight: 0,
+    },
   });
 
   const onSubmit: SubmitHandler<WeightFormValues> = (data) => {
@@ -92,6 +95,7 @@ export default function WeightPage() {
       title: 'Weight Logged',
       description: `Today's weight of ${data.weight}kg has been saved.`,
     });
+    form.reset({ weight: 0 });
   };
 
   const sortedEntries = useMemo(() => {
