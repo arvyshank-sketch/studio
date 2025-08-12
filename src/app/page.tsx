@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { ArrowRight, BookOpen, BookMarked, DollarSign, Sparkles, TrendingUp, UtensilsCrossed } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
-import type { JournalEntry } from '@/lib/types';
+import type { JournalEntry, MealEntry } from '@/lib/types';
 import { format, parseISO, subDays } from 'date-fns';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -45,20 +45,26 @@ const featureCards = [
 ];
 
 const JOURNAL_STORAGE_KEY = 'synergy-journal-history';
+const MEALS_STORAGE_KEY = 'synergy-meals-history';
 
 export default function DashboardPage() {
   const [isClient, setIsClient] = useState(false);
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
+  const [mealEntries, setMealEntries] = useState<MealEntry[]>([]);
 
   useEffect(() => {
     setIsClient(true);
     try {
-      const storedEntries = localStorage.getItem(JOURNAL_STORAGE_KEY);
-      if (storedEntries) {
-        setJournalEntries(JSON.parse(storedEntries));
+      const storedJournal = localStorage.getItem(JOURNAL_STORAGE_KEY);
+      if (storedJournal) {
+        setJournalEntries(JSON.parse(storedJournal));
+      }
+      const storedMeals = localStorage.getItem(MEALS_STORAGE_KEY);
+      if (storedMeals) {
+        setMealEntries(JSON.parse(storedMeals));
       }
     } catch (error) {
-      console.error('Failed to load journal entries from local storage', error);
+      console.error('Failed to load entries from local storage', error);
     }
   }, []);
 
@@ -69,15 +75,23 @@ export default function DashboardPage() {
     
     return last7Days.map(date => {
         const dateString = format(date, 'yyyy-MM-dd');
-        const entry = journalEntries.find(e => e.date === dateString);
+        const journalEntry = journalEntries.find(e => e.date === dateString);
+        const mealsForDay = mealEntries.filter(m => m.date === dateString);
+        const totalCalories = mealsForDay.reduce((sum, meal) => sum + meal.calories, 0);
+
         return {
             date: dateString,
-            studyHours: entry?.studyHours || 0,
-            quranPages: entry?.quranPages || 0,
-            expenses: entry?.expenses || 0,
+            studyHours: journalEntry?.studyHours || 0,
+            quranPages: journalEntry?.quranPages || 0,
+            expenses: journalEntry?.expenses || 0,
+            calories: totalCalories,
         };
     });
-  }, [journalEntries, isClient]);
+  }, [journalEntries, mealEntries, isClient]);
+
+  const hasData = useMemo(() => {
+      return journalEntries.length > 0 || mealEntries.length > 0;
+  }, [journalEntries, mealEntries]);
 
   return (
     <div className="flex flex-col gap-8 p-4 md:p-8">
@@ -113,16 +127,17 @@ export default function DashboardPage() {
             <CardHeader>
                 <CardTitle>Weekly Review</CardTitle>
                 <CardDescription>
-                    Your journal progress from the last 7 days.
+                    Your journal and diet progress from the last 7 days.
                 </CardDescription>
             </CardHeader>
             <CardContent>
-              {isClient && journalEntries.length > 0 ? (
+              {isClient && hasData ? (
                 <Tabs defaultValue="study">
-                  <TabsList className="grid w-full grid-cols-3">
+                  <TabsList className="grid w-full grid-cols-4">
                     <TabsTrigger value="study">Study</TabsTrigger>
                     <TabsTrigger value="quran">Quran</TabsTrigger>
                     <TabsTrigger value="expenses">Expenses</TabsTrigger>
+                    <TabsTrigger value="calories">Calories</TabsTrigger>
                   </TabsList>
                   <TabsContent value="study" className="h-[300px] w-full pr-8 pt-4">
                      <JournalChart data={last7DaysData} dataKey="studyHours" color="hsl(var(--primary))" name="Hours Studied" icon={BookOpen} />
@@ -133,13 +148,16 @@ export default function DashboardPage() {
                    <TabsContent value="expenses" className="h-[300px] w-full pr-8 pt-4">
                       <JournalChart data={last7DaysData} dataKey="expenses" color="hsl(var(--chart-2))" name="Expenses" icon={DollarSign} />
                    </TabsContent>
+                    <TabsContent value="calories" className="h-[300px] w-full pr-8 pt-4">
+                        <JournalChart data={last7DaysData} dataKey="calories" color="hsl(var(--chart-4))" name="Calories" icon={UtensilsCrossed} />
+                    </TabsContent>
                 </Tabs>
               ) : (
                 <div className="flex h-[300px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center">
                     <TrendingUp className="mx-auto mb-4 size-12 text-muted-foreground" />
                     <h3 className="text-lg font-semibold">Not Enough Data</h3>
                     <p className="text-sm text-muted-foreground">
-                        Log your journal entries for a few days to see a chart of your progress.
+                        Log your journal or diet entries for a few days to see a chart of your progress.
                     </p>
                 </div>
               )}
@@ -175,7 +193,7 @@ function JournalChart({ data, dataKey, color, name, icon: Icon }: { data: any[],
           fontSize={12}
           tickLine={false}
           axisLine={false}
-          domain={['dataMin', 'dataMax + 2']}
+          domain={['dataMin', `dataMax + ${dataKey === 'calories' ? 100 : 2}`]}
         />
         <Tooltip
           contentStyle={{

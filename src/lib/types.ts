@@ -5,6 +5,7 @@ export type WeightEntry = {
 
 export type MealEntry = {
   id: number;
+  date: string;
   name: string;
   calories: number;
 };

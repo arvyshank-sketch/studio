@@ -33,6 +33,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import type { MealEntry } from '@/lib/types';
 import { UtensilsCrossed, Trash2 } from 'lucide-react';
+import { format } from 'date-fns';
 
 const mealSchema = z.object({
   name: z.string().min(1, 'Meal name is required'),
@@ -41,11 +42,11 @@ const mealSchema = z.object({
 
 type MealFormValues = z.infer<typeof mealSchema>;
 
-const MEALS_STORAGE_KEY = 'synergy-meals';
+const MEALS_STORAGE_KEY = 'synergy-meals-history';
 
 export default function DietPage() {
   const { toast } = useToast();
-  const [meals, setMeals] = useState<MealEntry[]>([]);
+  const [allMeals, setAllMeals] = useState<MealEntry[]>([]);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -53,7 +54,7 @@ export default function DietPage() {
     try {
       const storedMeals = localStorage.getItem(MEALS_STORAGE_KEY);
       if (storedMeals) {
-        setMeals(JSON.parse(storedMeals));
+        setAllMeals(JSON.parse(storedMeals));
       }
     } catch (error) {
       console.error('Failed to load meals from local storage', error);
@@ -63,39 +64,37 @@ export default function DietPage() {
   useEffect(() => {
     if (isClient) {
       try {
-        localStorage.setItem(MEALS_STORAGE_KEY, JSON.stringify(meals));
+        localStorage.setItem(MEALS_STORAGE_KEY, JSON.stringify(allMeals));
       } catch (error) {
         console.error('Failed to save meals to local storage', error);
       }
     }
-  }, [meals, isClient]);
+  }, [allMeals, isClient]);
 
   const form = useForm<MealFormValues>({
     resolver: zodResolver(mealSchema),
     defaultValues: { name: '', calories: 0 },
   });
+  
+  const today = useMemo(() => isClient ? format(new Date(), 'yyyy-MM-dd') : '', [isClient]);
+
+  const todaysMeals = useMemo(() => {
+    return allMeals.filter(meal => meal.date === today);
+  }, [allMeals, today]);
 
   const onSubmit: SubmitHandler<MealFormValues> = (data) => {
-    const newMeal: MealEntry = { ...data, id: Date.now() };
-    setMeals((prev) => [...prev, newMeal]);
+    const newMeal: MealEntry = { ...data, id: Date.now(), date: today };
+    setAllMeals((prev) => [...prev, newMeal]);
     form.reset();
-    toast({
-      title: 'Meal Added',
-      description: `${data.name} has been logged.`,
-    });
   };
 
   const deleteMeal = (id: number) => {
-    setMeals((prev) => prev.filter((meal) => meal.id !== id));
-    toast({
-      title: 'Meal Removed',
-      description: `The meal has been removed from your log.`,
-    });
+    setAllMeals((prev) => prev.filter((meal) => meal.id !== id));
   };
 
   const totalCalories = useMemo(
-    () => meals.reduce((total, meal) => total + meal.calories, 0),
-    [meals]
+    () => todaysMeals.reduce((total, meal) => total + meal.calories, 0),
+    [todaysMeals]
   );
 
   return (
@@ -161,7 +160,7 @@ export default function DietPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {isClient && meals.length > 0 ? (
+            {isClient && todaysMeals.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -171,7 +170,7 @@ export default function DietPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {meals.map((meal) => (
+                  {todaysMeals.map((meal) => (
                     <TableRow key={meal.id}>
                       <TableCell className="font-medium">{meal.name}</TableCell>
                       <TableCell className="text-right">
@@ -197,7 +196,7 @@ export default function DietPage() {
               </div>
             )}
           </CardContent>
-           {isClient && meals.length > 0 && (
+           {isClient && todaysMeals.length > 0 && (
             <CardFooter>
                 <div className="w-full text-right text-lg font-bold">
                     Total: {totalCalories} Calories
