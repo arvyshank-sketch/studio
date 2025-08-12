@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -34,6 +34,8 @@ import { useToast } from '@/hooks/use-toast';
 import type { MealEntry } from '@/lib/types';
 import { UtensilsCrossed, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { MEALS_STORAGE_KEY } from '@/lib/constants';
+import { useSyncedLocalStorage } from '@/hooks/use-synced-local-storage';
 
 const mealSchema = z.object({
   name: z.string().min(1, 'Meal name is required'),
@@ -42,34 +44,14 @@ const mealSchema = z.object({
 
 type MealFormValues = z.infer<typeof mealSchema>;
 
-const MEALS_STORAGE_KEY = 'synergy-meals-history';
-
 export default function DietPage() {
   const { toast } = useToast();
-  const [allMeals, setAllMeals] = useState<MealEntry[]>([]);
+  const [allMeals, setAllMeals] = useSyncedLocalStorage<MealEntry[]>(MEALS_STORAGE_KEY, []);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
-    try {
-      const storedMeals = localStorage.getItem(MEALS_STORAGE_KEY);
-      if (storedMeals) {
-        setAllMeals(JSON.parse(storedMeals));
-      }
-    } catch (error) {
-      console.error('Failed to load meals from local storage', error);
-    }
   }, []);
-
-  useEffect(() => {
-    if (isClient) {
-      try {
-        localStorage.setItem(MEALS_STORAGE_KEY, JSON.stringify(allMeals));
-      } catch (error) {
-        console.error('Failed to save meals to local storage', error);
-      }
-    }
-  }, [allMeals, isClient]);
 
   const form = useForm<MealFormValues>({
     resolver: zodResolver(mealSchema),
@@ -88,9 +70,9 @@ export default function DietPage() {
     form.reset();
   };
 
-  const deleteMeal = (id: number) => {
+  const deleteMeal = useCallback((id: number) => {
     setAllMeals((prev) => prev.filter((meal) => meal.id !== id));
-  };
+  },[setAllMeals]);
 
   const totalCalories = useMemo(
     () => todaysMeals.reduce((total, meal) => total + meal.calories, 0),

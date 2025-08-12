@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { format, subDays, isToday, parseISO } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import {
   Card,
   CardContent,
@@ -34,6 +34,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Flame } from 'lucide-react';
+import { JOURNAL_STORAGE_KEY } from '@/lib/constants';
+import { useSyncedLocalStorage } from '@/hooks/use-synced-local-storage';
 
 const journalSchema = z.object({
   studyHours: z.coerce.number().min(0),
@@ -44,34 +46,14 @@ const journalSchema = z.object({
 
 type JournalFormValues = z.infer<typeof journalSchema>;
 
-const JOURNAL_STORAGE_KEY = 'synergy-journal-entries';
-
 export default function JournalPage() {
   const { toast } = useToast();
-  const [entries, setEntries] = useState<JournalEntry[]>([]);
+  const [entries, setEntries] = useSyncedLocalStorage<JournalEntry[]>(JOURNAL_STORAGE_KEY, []);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
-    try {
-      const storedEntries = localStorage.getItem(JOURNAL_STORAGE_KEY);
-      if (storedEntries) {
-        setEntries(JSON.parse(storedEntries));
-      }
-    } catch (error) {
-      console.error('Failed to load journal entries from local storage', error);
-    }
   }, []);
-
-  useEffect(() => {
-    if (isClient) {
-      try {
-        localStorage.setItem(JOURNAL_STORAGE_KEY, JSON.stringify(entries));
-      } catch (error) {
-        console.error('Failed to save journal entries to local storage', error);
-      }
-    }
-  }, [entries, isClient]);
 
   const today = useMemo(() => isClient ? format(new Date(), 'yyyy-MM-dd') : '', [isClient]);
   const yesterday = useMemo(() => isClient ? format(subDays(new Date(), 1), 'yyyy-MM-dd') : '', [isClient]);
@@ -88,7 +70,20 @@ export default function JournalPage() {
 
   const todaysEntry = useMemo(() => entries.find(e => e.date === today), [entries, today]);
   const yesterdaysEntry = useMemo(() => entries.find(e => e.date === yesterday), [entries, yesterday]);
-  const currentStreak = useMemo(() => todaysEntry?.streak ?? 0, [todaysEntry]);
+  
+  const calculateStreak = useCallback((allEntries: JournalEntry[], today: string, yesterday: string) => {
+    const todaysEntry = allEntries.find(e => e.date === today);
+    if (!todaysEntry?.abstained) return 0;
+    
+    const yesterdaysEntry = allEntries.find(e => e.date === yesterday);
+    return (yesterdaysEntry?.streak ?? 0) + 1;
+  }, []);
+
+  const currentStreak = useMemo(() => {
+    const entry = entries.find(e => e.date === today);
+    return entry?.streak ?? 0;
+  }, [entries, today]);
+
 
   useEffect(() => {
     if (isClient) {
@@ -110,7 +105,6 @@ export default function JournalPage() {
     setEntries((prev) => {
       let newStreak = 0;
       if (data.abstained) {
-        // If abstained today, continue or start streak
         const yesterdayStreak = yesterdaysEntry?.abstained ? (yesterdaysEntry.streak || 0) : 0;
         newStreak = yesterdayStreak + 1;
       }

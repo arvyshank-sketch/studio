@@ -15,6 +15,7 @@ import type { MealEntry, JournalEntry } from '@/lib/types';
 import { format, parseISO, subDays } from 'date-fns';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { JOURNAL_STORAGE_KEY, MEALS_STORAGE_KEY } from '@/lib/constants';
 
 
 const featureCards = [
@@ -44,9 +45,6 @@ const featureCards = [
   },
 ];
 
-const JOURNAL_STORAGE_KEY = 'synergy-journal-entries';
-const MEALS_STORAGE_KEY = 'synergy-meals-history';
-
 export default function DashboardPage() {
   const [isClient, setIsClient] = useState(false);
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
@@ -60,6 +58,21 @@ export default function DashboardPage() {
 
       const storedMeals = localStorage.getItem(MEALS_STORAGE_KEY);
       if (storedMeals) setMealEntries(JSON.parse(storedMeals));
+      
+      const handleStorageChange = (event: StorageEvent) => {
+        if (event.key === JOURNAL_STORAGE_KEY && event.newValue) {
+          setJournalEntries(JSON.parse(event.newValue));
+        }
+        if (event.key === MEALS_STORAGE_KEY && event.newValue) {
+          setMealEntries(JSON.parse(event.newValue));
+        }
+      };
+
+      window.addEventListener('storage', handleStorageChange);
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+      };
+      
     } catch (error) {
       console.error('Failed to load entries from local storage', error);
     }
@@ -78,7 +91,8 @@ export default function DashboardPage() {
         const totalCalories = mealsForDay.reduce((sum, meal) => sum + meal.calories, 0);
 
         return {
-            date: dateString,
+            date: format(date, 'EEE'),
+            fullDate: dateString,
             calories: totalCalories,
             studyHours: journalEntry?.studyHours || 0,
             quranPages: journalEntry?.quranPages || 0,
@@ -175,7 +189,6 @@ function WeeklyChart({ data, dataKey, color, name, icon: Icon, unit = '' }: { da
         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" />
         <XAxis
           dataKey="date"
-          tickFormatter={(str) => format(parseISO(str), 'MMM d')}
           stroke="hsl(var(--muted-foreground))"
           fontSize={12}
           tickLine={false}
@@ -196,9 +209,10 @@ function WeeklyChart({ data, dataKey, color, name, icon: Icon, unit = '' }: { da
             borderRadius: 'var(--radius)',
           }}
           labelStyle={{ color: 'hsl(var(--foreground))' }}
-           formatter={(value: number) => [`${unit === '$' ? unit : ''}${value}${unit !== '$' ? unit : ''}`, name]}
+           formatter={(value: number, name, props) => [`${unit === '$' ? unit : ''}${value}${unit !== '$' ? unit : ''}`, props.payload.name]}
+           labelFormatter={(label) => format(parseISO(data.find(d => d.date === label)?.fullDate ?? new Date()), 'MMMM d, yyyy')}
         />
-        <Bar dataKey={dataKey} fill={color} radius={[4, 4, 0, 0]} />
+        <Bar dataKey={dataKey} fill={color} radius={[4, 4, 0, 0]} name={name} />
       </BarChart>
     </ResponsiveContainer>
   )
