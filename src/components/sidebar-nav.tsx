@@ -28,7 +28,7 @@ const links = [
   },
   {
     href: '/journal',
-    label: 'Daily Habits',
+    label: 'Daily Journal',
     icon: BookMarked,
   },
   {

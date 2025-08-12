@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { ArrowRight, BookOpen, BookMarked, DollarSign, Sparkles, TrendingUp, UtensilsCrossed, CheckSquare } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
-import type { MealEntry, Habit, HabitEntry } from '@/lib/types';
+import type { MealEntry, JournalEntry } from '@/lib/types';
 import { format, parseISO, subDays } from 'date-fns';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,8 +19,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const featureCards = [
   {
-    title: 'Daily Habits',
-    description: "Track your daily habits and build consistency.",
+    title: 'Daily Journal',
+    description: "Log your studies, reading, and daily habits.",
     href: '/journal',
     icon: <BookMarked className="size-8 text-primary" />,
   },
@@ -44,25 +44,19 @@ const featureCards = [
   },
 ];
 
-const HABITS_STORAGE_KEY = 'synergy-habits';
-const HABIT_ENTRIES_STORAGE_KEY = 'synergy-habit-entries';
+const JOURNAL_STORAGE_KEY = 'synergy-journal-entries';
 const MEALS_STORAGE_KEY = 'synergy-meals-history';
 
 export default function DashboardPage() {
   const [isClient, setIsClient] = useState(false);
-  const [habitEntries, setHabitEntries] = useState<HabitEntry[]>([]);
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [mealEntries, setMealEntries] = useState<MealEntry[]>([]);
-  const [habits, setHabits] = useState<Habit[]>([]);
-
 
   useEffect(() => {
     setIsClient(true);
     try {
-      const storedHabits = localStorage.getItem(HABITS_STORAGE_KEY);
-      if (storedHabits) setHabits(JSON.parse(storedHabits));
-
-      const storedHabitEntries = localStorage.getItem(HABIT_ENTRIES_STORAGE_KEY);
-      if (storedHabitEntries) setHabitEntries(JSON.parse(storedHabitEntries));
+      const storedJournalEntries = localStorage.getItem(JOURNAL_STORAGE_KEY);
+      if (storedJournalEntries) setJournalEntries(JSON.parse(storedJournalEntries));
 
       const storedMeals = localStorage.getItem(MEALS_STORAGE_KEY);
       if (storedMeals) setMealEntries(JSON.parse(storedMeals));
@@ -79,24 +73,23 @@ export default function DashboardPage() {
     return last7Days.map(date => {
         const dateString = format(date, 'yyyy-MM-dd');
         
-        const habitEntry = habitEntries.find(e => e.date === dateString);
-        const completedCount = habitEntry?.completedHabitIds.length || 0;
-        const completionRate = habits.length > 0 ? (completedCount / habits.length) * 100 : 0;
-        
+        const journalEntry = journalEntries.find(e => e.date === dateString);
         const mealsForDay = mealEntries.filter(m => m.date === dateString);
         const totalCalories = mealsForDay.reduce((sum, meal) => sum + meal.calories, 0);
 
         return {
             date: dateString,
             calories: totalCalories,
-            habitCompletion: completionRate
+            studyHours: journalEntry?.studyHours || 0,
+            quranPages: journalEntry?.quranPages || 0,
+            expenses: journalEntry?.expenses || 0,
         };
     });
-  }, [habitEntries, mealEntries, habits, isClient]);
+  }, [journalEntries, mealEntries, isClient]);
 
   const hasData = useMemo(() => {
-      return habitEntries.length > 0 || mealEntries.length > 0;
-  }, [habitEntries, mealEntries]);
+      return journalEntries.length > 0 || mealEntries.length > 0;
+  }, [journalEntries, mealEntries]);
 
   return (
     <div className="flex flex-col gap-8 p-4 md:p-8">
@@ -132,18 +125,26 @@ export default function DashboardPage() {
             <CardHeader>
                 <CardTitle>Weekly Review</CardTitle>
                 <CardDescription>
-                    Your habit and diet progress from the last 7 days.
+                    Your activity and diet progress from the last 7 days.
                 </CardDescription>
             </CardHeader>
             <CardContent>
               {isClient && hasData ? (
-                <Tabs defaultValue="habits">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="habits">Habits</TabsTrigger>
+                <Tabs defaultValue="study">
+                  <TabsList className="grid w-full grid-cols-4">
+                    <TabsTrigger value="study">Study</TabsTrigger>
+                    <TabsTrigger value="quran">Quran</TabsTrigger>
+                    <TabsTrigger value="expenses">Expenses</TabsTrigger>
                     <TabsTrigger value="calories">Calories</TabsTrigger>
                   </TabsList>
-                  <TabsContent value="habits" className="h-[300px] w-full pr-8 pt-4">
-                     <WeeklyChart data={last7DaysData} dataKey="habitCompletion" color="hsl(var(--primary))" name="Completion" unit="%" icon={CheckSquare} />
+                  <TabsContent value="study" className="h-[300px] w-full pr-8 pt-4">
+                     <WeeklyChart data={last7DaysData} dataKey="studyHours" color="hsl(var(--chart-1))" name="Study" unit=" hrs" icon={BookOpen} />
+                  </TabsContent>
+                   <TabsContent value="quran" className="h-[300px] w-full pr-8 pt-4">
+                     <WeeklyChart data={last7DaysData} dataKey="quranPages" color="hsl(var(--chart-3))" name="Quran" unit=" pages" icon={BookMarked} />
+                  </TabsContent>
+                   <TabsContent value="expenses" className="h-[300px] w-full pr-8 pt-4">
+                     <WeeklyChart data={last7DaysData} dataKey="expenses" color="hsl(var(--chart-2))" name="Expenses" unit="$" icon={DollarSign} />
                   </TabsContent>
                   <TabsContent value="calories" className="h-[300px] w-full pr-8 pt-4">
                       <WeeklyChart data={last7DaysData} dataKey="calories" color="hsl(var(--chart-4))" name="Calories" icon={UtensilsCrossed} />
@@ -154,7 +155,7 @@ export default function DashboardPage() {
                     <TrendingUp className="mx-auto mb-4 size-12 text-muted-foreground" />
                     <h3 className="text-lg font-semibold">Not Enough Data</h3>
                     <p className="text-sm text-muted-foreground">
-                        Log your habits or diet entries for a few days to see a chart of your progress.
+                        Log your journal or diet entries for a few days to see a chart of your progress.
                     </p>
                 </div>
               )}
@@ -185,6 +186,7 @@ function WeeklyChart({ data, dataKey, color, name, icon: Icon, unit = '' }: { da
           tickLine={false}
           axisLine={false}
           tickFormatter={(val) => `${val}${unit}`}
+          width={unit === '$' ? 40 : 30}
         />
         <Tooltip
           contentStyle={{
@@ -193,7 +195,7 @@ function WeeklyChart({ data, dataKey, color, name, icon: Icon, unit = '' }: { da
             borderRadius: 'var(--radius)',
           }}
           labelStyle={{ color: 'hsl(var(--foreground))' }}
-           formatter={(value) => [`${value}${unit}`, name]}
+           formatter={(value: number) => [`${unit === '$' ? unit : ''}${value}${unit !== '$' ? unit : ''}`, name]}
         />
         <Bar dataKey={dataKey} fill={color} radius={[4, 4, 0, 0]} />
       </BarChart>
