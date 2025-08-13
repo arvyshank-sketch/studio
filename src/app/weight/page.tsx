@@ -321,7 +321,7 @@ function WeightPage() {
                                         <FormItem>
                                             <FormLabel>Height (cm)</FormLabel>
                                             <FormControl>
-                                                <Input type="number" placeholder="e.g., 180" {...field} />
+                                                <Input type="number" placeholder="e.g., 180" {...field} value={field.value ?? ''} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
