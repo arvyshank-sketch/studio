@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback }from 'react';
-import { useForm, Controller }from 'react-hook-form';
+import { useForm }from 'react-hook-form';
 import { zodResolver }from '@hookform/resolvers/zod';
 import { z }from 'zod';
 import {
@@ -16,6 +16,7 @@ import {
   getDocs,
   runTransaction,
   onSnapshot,
+  collectionGroup,
 } from 'firebase/firestore';
 import { db }from '@/lib/firebase';
 import { useAuth }from '@/context/auth-context';
@@ -85,6 +86,7 @@ function DailyLogPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [streak, setStreak] = useState(0);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [habits, setHabits] = useState<Habit[]>([]);
   const [isHabitManagerOpen, setIsHabitManagerOpen] = useState(false);
   
   const today = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
@@ -121,8 +123,14 @@ function DailyLogPage() {
     }
     return null;
   }, [user]);
-  
 
+  const habitsCollectionRef = useMemo(() => {
+      if(user) {
+        return collection(db, 'users', user.uid, 'habits');
+      }
+      return null;
+  }, [user]);
+  
   const calculateStreak = useCallback(async () => {
     if (!logsCollectionRef) return 0;
   
@@ -170,28 +178,18 @@ function DailyLogPage() {
 
 
   useEffect(() => {
-    if (!userDocRef) return;
+    if (!userDocRef || !habitsCollectionRef) return;
     
-    // Set up real-time listener for user profile
-    const unsubscribeProfile = onSnapshot(userDocRef, (doc) => {
+    // Set up real-time listener for user profile and habits
+    const unsubProfile = onSnapshot(userDocRef, (doc) => {
         if (doc.exists()) {
-            const profileData = doc.data() as UserProfile;
-            setUserProfile(profileData);
-            // Ensure form has default values for new habits
-            const currentHabits = form.getValues('customHabits') || {};
-            const newHabits = profileData.habits?.reduce((acc, habit) => {
-                acc[habit.id] = currentHabits[habit.id] || false;
-                return acc;
-            }, {} as Record<string, boolean>) || {};
-            form.setValue('customHabits', newHabits);
+            setUserProfile(doc.data() as UserProfile);
         }
-    }, (error) => {
-         console.error('Error listening to profile updates:', error);
-         toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: 'Could not fetch user profile.',
-        });
+    });
+
+    const unsubHabits = onSnapshot(query(habitsCollectionRef, orderBy('createdAt', 'desc')), (snapshot) => {
+        const habitsData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as Habit[];
+        setHabits(habitsData);
     });
 
     // Fetch initial log and calculate streak
@@ -201,7 +199,13 @@ function DailyLogPage() {
         if (docRef) {
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
-              form.reset(docSnap.data() as z.infer<typeof logSchema>);
+              const logData = docSnap.data() as z.infer<typeof logSchema>;
+              // Ensure customHabits has defaults for all existing habits
+              const customHabitsWithDefaults = habits.reduce((acc, habit) => {
+                  acc[habit.id] = logData.customHabits?.[habit.id] || false;
+                  return acc;
+              }, {} as Record<string, boolean>)
+              form.reset({...logData, customHabits: customHabitsWithDefaults });
             }
         }
         const currentStreak = await calculateStreak();
@@ -221,9 +225,10 @@ function DailyLogPage() {
     fetchInitialData();
 
     return () => {
-        unsubscribeProfile();
+        unsubProfile();
+        unsubHabits();
     };
-  }, [userDocRef, docRef, toast, calculateStreak, form]);
+  }, [userDocRef, habitsCollectionRef, docRef, toast, calculateStreak, form, habits]);
 
   const handleFormSubmit = async (data: z.infer<typeof logSchema>) => {
     if (!docRef || !userDocRef) return;
@@ -402,8 +407,8 @@ function DailyLogPage() {
                                         </Button>
                                     </div>
                                     <div className="space-y-4">
-                                        {userProfile?.habits && userProfile.habits.length > 0 ? (
-                                           userProfile.habits.map((habit) => (
+                                        {habits && habits.length > 0 ? (
+                                           habits.map((habit) => (
                                                 <FormField
                                                     key={habit.id}
                                                     control={form.control}
@@ -474,11 +479,11 @@ function DailyLogPage() {
           isOpen={isHabitManagerOpen}
           setIsOpen={setIsHabitManagerOpen}
           profile={userProfile}
+          habits={habits}
+          setHabits={setHabits}
       />
     </div>
   );
 }
 
 export default withAuth(DailyLogPage);
-
-    

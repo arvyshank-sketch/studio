@@ -43,7 +43,10 @@ export type Badge = {
 export type Habit = {
     id: string;
     name: string;
-    createdAt: Timestamp;
+    createdAt: Timestamp | Date;
+    streak: number;
+    lastCheckedOn: Timestamp | Date | null;
+    active: boolean;
 }
 
 export type UserProfile = {
@@ -89,7 +92,3 @@ export type AnalyzePhysicalProgressOutput = {
         diet: string;
     };
 };
-
-    
-
-    
