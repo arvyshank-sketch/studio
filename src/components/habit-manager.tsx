@@ -33,7 +33,7 @@ import { ScrollArea } from './ui/scroll-area';
 interface HabitManagerProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
-  profile: UserProfile;
+  profile: UserProfile | null;
 }
 
 const habitSchema = z.object({
@@ -45,7 +45,8 @@ type HabitFormValues = z.infer<typeof habitSchema>;
 export function HabitManager({ isOpen, setIsOpen, profile }: HabitManagerProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const userDocRef = doc(db, 'users', profile.uid);
+  
+  const userDocRef = profile?.uid ? doc(db, 'users', profile.uid) : null;
 
   const form = useForm<HabitFormValues>({
     resolver: zodResolver(habitSchema),
@@ -53,6 +54,11 @@ export function HabitManager({ isOpen, setIsOpen, profile }: HabitManagerProps) 
   });
 
   const onSubmit: SubmitHandler<HabitFormValues> = async (data) => {
+    if (!userDocRef) {
+        toast({ variant: 'destructive', title: 'Error', description: 'User profile not available.' });
+        return;
+    }
+
     setIsSubmitting(true);
     const newHabit: Habit = {
       id: `habit_${Date.now()}`,
@@ -79,6 +85,10 @@ export function HabitManager({ isOpen, setIsOpen, profile }: HabitManagerProps) 
   };
 
   const deleteHabit = async (habitToDelete: Habit) => {
+    if (!userDocRef) {
+        toast({ variant: 'destructive', title: 'Error', description: 'User profile not available.' });
+        return;
+    }
     if (!window.confirm(`Are you sure you want to delete the habit "${habitToDelete.name}"? This cannot be undone.`)) {
         return;
     }
@@ -122,7 +132,7 @@ export function HabitManager({ isOpen, setIsOpen, profile }: HabitManagerProps) 
                   </FormItem>
                 )}
               />
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting || !userDocRef}>
                 {isSubmitting ? <Loader2 className="animate-spin" /> : 'Add'}
               </Button>
             </form>
@@ -131,12 +141,12 @@ export function HabitManager({ isOpen, setIsOpen, profile }: HabitManagerProps) 
           <div className="mt-8">
             <h3 className="mb-4 text-lg font-medium">Existing Habits</h3>
             <ScrollArea className="h-[200px] pr-4">
-                {profile.habits && profile.habits.length > 0 ? (
+                {profile?.habits && profile.habits.length > 0 ? (
                 <div className="space-y-2">
                     {profile.habits.map((habit) => (
                     <div key={habit.id} className="flex items-center justify-between rounded-md border p-3">
                         <span className="text-sm">{habit.name}</span>
-                        <Button variant="ghost" size="icon" onClick={() => deleteHabit(habit)}>
+                        <Button variant="ghost" size="icon" onClick={() => deleteHabit(habit)} disabled={!userDocRef}>
                             <Trash2 className="size-4 text-destructive" />
                             <span className="sr-only">Delete habit</span>
                         </Button>
