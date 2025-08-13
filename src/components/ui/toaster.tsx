@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useToast } from "@/hooks/use-toast"
@@ -18,20 +19,27 @@ export function Toaster() {
   return (
     <ToastProvider>
       {toasts.map(function ({ id, title, description, action, variant, ...props }) {
+        const isSystemMessage = typeof title === 'string' && title.startsWith('[') && title.endsWith(']');
         return (
           <Toast key={id} variant={variant} {...props}>
-            <div className="grid gap-2 flex-1">
-                <div className="flex items-center gap-3">
-                    {variant === 'destructive' ? 
-                        <AlertCircle className="text-red-400" /> : 
-                        <AlertCircle className="text-cyan-300" />}
-                    {title && <ToastTitle>{title}</ToastTitle>}
-                </div>
-              {description && (
-                <div className="pl-8">
-                    <ToastDescription>{description}</ToastDescription>
-                </div>
-              )}
+            <div className={cn("grid gap-1 flex-1", isSystemMessage && "text-center")}>
+                {isSystemMessage ? (
+                     <ToastTitle className="text-xl tracking-widest">{title}</ToastTitle>
+                ) : (
+                    <>
+                        <div className="flex items-center gap-3">
+                            {variant === 'destructive' ? 
+                                <AlertCircle className="text-red-400" /> : 
+                                <AlertCircle className="text-cyan-300" />}
+                            {title && <ToastTitle>{title}</ToastTitle>}
+                        </div>
+                      {description && (
+                        <div className="pl-8">
+                            <ToastDescription>{description}</ToastDescription>
+                        </div>
+                      )}
+                    </>
+                )}
             </div>
             {action}
             <ToastClose />

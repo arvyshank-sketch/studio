@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -50,7 +51,14 @@ const Toast = React.forwardRef<
       ref={ref}
       className={cn(toastVariants({ variant }), className)}
       {...props}
-    />
+    >
+       {/* Ornate corners */}
+       <div className="absolute top-1 left-1 w-4 h-4 border-l-2 border-t-2 border-cyan-400/50 rounded-tl-md"></div>
+       <div className="absolute top-1 right-1 w-4 h-4 border-r-2 border-t-2 border-cyan-400/50 rounded-tr-md"></div>
+       <div className="absolute bottom-1 left-1 w-4 h-4 border-l-2 border-b-2 border-cyan-400/50 rounded-bl-md"></div>
+       <div className="absolute bottom-1 right-1 w-4 h-4 border-r-2 border-b-2 border-cyan-400/50 rounded-br-md"></div>
+       {props.children}
+    </ToastPrimitives.Root>
   )
 })
 Toast.displayName = ToastPrimitives.Root.displayName

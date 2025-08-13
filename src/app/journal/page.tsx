@@ -308,9 +308,8 @@ function DailyLogPage() {
       setStreak(newStreak);
 
       toast({
-        title: 'Quest Log Saved!',
-        description: "Your progress, XP, and badges have been updated.",
-        action: <div className="p-2 bg-green-500 text-white rounded-full"><CheckCircle size={24} /></div>,
+        title: '[Congratulations! You have completed the Daily Quest.]',
+        duration: 3000,
       });
 
       if (penaltyToastDescription) {

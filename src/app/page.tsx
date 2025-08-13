@@ -365,8 +365,8 @@ function DashboardPage() {
         });
         
         toast({
-            title: `+${XP_REWARDS.UNEXPECTED_QUEST} XP!`,
-            description: "You have successfully completed the Unexpected Quest!",
+            title: '[Congratulations! You have completed the Unexpected Quest.]',
+            duration: 3000,
         });
 
     } catch (e) {

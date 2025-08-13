@@ -1,3 +1,4 @@
+
 "use client"
 
 // Inspired by react-hot-toast library
@@ -8,7 +9,7 @@ import type {
   ToastProps,
 } from "@/components/ui/toast"
 
-const TOAST_LIMIT = 1
+const TOAST_LIMIT = 3
 const TOAST_REMOVE_DELAY = 1000000
 
 type ToasterToast = ToastProps & {
@@ -16,6 +17,7 @@ type ToasterToast = ToastProps & {
   title?: React.ReactNode
   description?: React.ReactNode
   action?: ToastActionElement
+  duration?: number;
 }
 
 const actionTypes = {
@@ -93,8 +95,7 @@ export const reducer = (state: State, action: Action): State => {
     case "DISMISS_TOAST": {
       const { toastId } = action
 
-      // ! Side effects ! - This could be extracted into a dismissToast() action,
-      // but I'll keep it here for simplicity
+      // Side-effectful way to handle dynamic dismissal from outside the hook
       if (toastId) {
         addToRemoveQueue(toastId)
       } else {
@@ -183,6 +184,22 @@ function useToast() {
       }
     }
   }, [state])
+
+  // Effect to handle auto-dismissal
+  React.useEffect(() => {
+    const { toasts } = state;
+
+    toasts.forEach(t => {
+        if (t.duration && t.open) {
+            const timer = setTimeout(() => {
+                dispatch({ type: 'DISMISS_TOAST', toastId: t.id });
+            }, t.duration);
+
+            return () => clearTimeout(timer);
+        }
+    })
+  }, [state]);
+
 
   return {
     ...state,
