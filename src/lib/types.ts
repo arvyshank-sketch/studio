@@ -49,6 +49,20 @@ export type Habit = {
     active: boolean;
 }
 
+export type Reward = {
+    id: string;
+    name: string;
+    description: string;
+    type: 'title' | 'badge' | 'quote';
+    rarity: 'common' | 'rare' | 'legendary';
+    icon?: React.ElementType;
+}
+
+export type UserReward = Reward & {
+    unlockedAt: Timestamp | any;
+}
+
+
 export type UserProfile = {
     uid: string;
     email: string;

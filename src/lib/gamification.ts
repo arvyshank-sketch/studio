@@ -140,9 +140,9 @@ const badgeChecks: { [key: string]: (ctx: BadgeCheckContext) => boolean } = {
  * @param allLogs All historical logs for the user.
  * @param newLog The new log being submitted.
  * @param customXp A specific amount of XP to award (e.g., for weight gain).
- * @returns An updated user profile object.
+ * @returns An updated user profile object and a flag indicating if a level-up occurred.
  */
-export const processGamification = (userProfile: UserProfile, allLogs: DailyLog[], newLog: Partial<DailyLog>, customXp?: number): Partial<UserProfile> => {
+export const processGamification = (userProfile: UserProfile, allLogs: DailyLog[], newLog: Partial<DailyLog>, customXp?: number) => {
   // --- 1. Calculate XP for the new log ---
   let earnedXp = customXp || 0;
 
@@ -173,11 +173,12 @@ export const processGamification = (userProfile: UserProfile, allLogs: DailyLog[
   let newXp = currentXp + earnedXp;
 
   // --- 2. Check for Level Up ---
+  let leveledUp = false;
   let xpForNextLevel = getXpForLevel(currentLevel + 1);
   
   while (newXp >= xpForNextLevel) {
     currentLevel++;
-    // Surplus XP is handled by simply having the total XP
+    leveledUp = true;
     xpForNextLevel = getXpForLevel(currentLevel + 1);
   }
 
@@ -208,5 +209,5 @@ export const processGamification = (userProfile: UserProfile, allLogs: DailyLog[
     badges: Array.from(currentBadges),
   };
 
-  return updatedProfile;
+  return { updatedProfile, leveledUp };
 };

@@ -23,6 +23,7 @@ import withAuth from '@/components/with-auth';
 import type { DailyLog, Habit, UserProfile }from '@/lib/types';
 import { format, subDays, parse }from 'date-fns';
 import { processGamification } from '@/lib/gamification';
+import { grantRandomReward } from '@/lib/rewards';
 
 import { Button }from '@/components/ui/button';
 import {
@@ -233,7 +234,7 @@ function DailyLogPage() {
   }, [userDocRef, habitsCollectionRef, docRef, toast, calculateStreak, form]);
 
   const handleFormSubmit = async (data: z.infer<typeof logSchema>) => {
-    if (!docRef || !userDocRef) return;
+    if (!docRef || !userDocRef || !user) return;
     setIsSubmitting(true);
     
     const logData: DailyLog = {
@@ -253,18 +254,27 @@ function DailyLogPage() {
           throw new Error("User profile not found!");
         }
         const profile = userProfileSnap.data() as UserProfile;
+        const previousLevel = profile.level ?? 1;
 
-        // Note: The gamification logic needs *all* logs. For simplicity in this transaction,
-        // we'll fetch them here. For larger datasets, consider optimizing this.
+        // Note: The gamification logic needs *all* logs for some badge checks.
         const allLogsQuery = query(logsCollectionRef!, orderBy('date', 'desc'));
         const allLogsSnap = await getDocs(allLogsQuery);
         const allLogs = allLogsSnap.docs.map(doc => doc.data() as DailyLog);
 
+        const gamificationResult = processGamification(profile, allLogs, logData);
         transaction.set(docRef, logData, { merge: true });
-
-        const updatedProfile = processGamification(profile, allLogs, logData);
-
-        transaction.update(userDocRef, updatedProfile);
+        transaction.update(userDocRef, gamificationResult.updatedProfile);
+        
+        // Grant a reward on level up
+        if (gamificationResult.leveledUp) {
+            const newReward = await grantRandomReward(user.uid, transaction);
+            if(newReward) {
+                toast({
+                    title: 'New Reward Unlocked!',
+                    description: `You received: ${newReward.name}`,
+                })
+            }
+        }
       });
       
       const newStreak = await calculateStreak();

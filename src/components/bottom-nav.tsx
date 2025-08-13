@@ -9,6 +9,7 @@ import {
   BookOpenCheck,
   Utensils,
   Weight,
+  Award,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
@@ -40,6 +41,11 @@ const links: NavLink[] = [
     label: 'Weight',
     icon: Weight,
   },
+  {
+    href: '/rewards',
+    label: 'Rewards',
+    icon: Award,
+  },
 ];
 
 export function BottomNav() {
@@ -50,7 +56,7 @@ export function BottomNav() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/80 backdrop-blur-sm">
-      <nav className="grid h-16 grid-cols-4 items-center justify-around">
+      <nav className="grid h-16 grid-cols-5 items-center justify-around">
         {links.map((link) => {
           const isActive = pathname === link.href;
           return (
