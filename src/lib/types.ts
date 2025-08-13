@@ -1,6 +1,5 @@
 
 import { Timestamp } from "firebase/firestore";
-import type { LucideIcon } from "lucide-react";
 
 export type WeightEntry = {
   id: string;
@@ -13,23 +12,6 @@ export type MealEntry = {
   date: string;
   name: string;
   calories: number;
-};
-
-export type Habit = {
-  id: string;
-  userId: string;
-  name: string;
-  icon: string; // Storing icon name as string
-  createdAt: Timestamp;
-  currentStreak: number;
-  longestStreak: number;
-  lastCompletedDate?: string; // YYYY-MM-DD
-};
-
-export type HabitEntry = {
-  id: string;
-  date: string; // YYYY-MM-DD
-  completedHabitIds: string[];
 };
 
 export type JournalEntry = {
