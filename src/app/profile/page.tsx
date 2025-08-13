@@ -78,8 +78,6 @@ const jinwooAvatars = [
     { id: '8', src: 'https://placehold.co/128x128.png', hint: 'sung jin woo portrait'},
 ];
 
-const DEFAULT_AVATAR_URL = 'https://placehold.co/128x128.png?text=SJW';
-
 const Commandment = ({ text, xp, isPenalty = false }: { text: string; xp: number; isPenalty?: boolean }) => (
     <li className="flex justify-between items-center">
         <div className="flex items-center gap-2">
@@ -138,17 +136,15 @@ function ProfilePage() {
     if (!user) return;
     setIsUpdatingAvatar(true);
     
-    // In a real app, you would likely upload a file and get a URL.
-    // For this prototype, we'll use the placeholder URL directly,
-    // but the `data-ai-hint` will guide the final image replacement.
-    const finalUrl = photoURL;
+    const finalUrl = new URL(photoURL);
+    finalUrl.searchParams.set('text', hint.replace(/ /g, '+'));
 
     try {
-        await updateProfile(user, { photoURL: finalUrl });
+        await updateProfile(user, { photoURL: finalUrl.href });
         const userDocRef = doc(db, 'users', user.uid);
-        await updateDoc(userDocRef, { photoURL: finalUrl });
+        await updateDoc(userDocRef, { photoURL: finalUrl.href });
 
-        setProfile(prev => prev ? { ...prev, photoURL: finalUrl } : null);
+        setProfile(prev => prev ? { ...prev, photoURL: finalUrl.href } : null);
 
         toast({ title: "Avatar updated!", description: "Your new look is ready."});
         setIsAvatarDialogOpen(false);
@@ -200,7 +196,7 @@ function ProfilePage() {
                 <button className="relative group">
                 <Avatar className="size-20 border-2 border-primary overflow-hidden">
                     <SafeImage
-                        src={profile?.photoURL ?? undefined}
+                        src={profile?.photoURL}
                         alt={profile?.displayName ?? "User Avatar"}
                         width={80}
                         height={80}
