@@ -8,10 +8,10 @@ const BASE_XP = 100;
 const GROWTH_FACTOR = 1.2;
 
 export const XP_REWARDS = {
-  STUDY_PER_30_MIN: 5,         // 5 XP per 30 minutes
-  QURAN_PER_PAGE: 1,           // 1 XP per page
+  STUDY_PER_30_MIN: 10,         // 10 XP per 30 minutes
+  QURAN_PER_PAGE: 2,           // 2 XP per page
   EXPENSE_LOGGED: 5,
-  ABSTAINED: 20,
+  ABSTAINED: 25,
   CUSTOM_HABIT: 15,
   CALORIE_LOGGED: 10,          // XP for logging any meal for the day
   WEIGHT_GAIN: 100,            // XP for any increase in weight
