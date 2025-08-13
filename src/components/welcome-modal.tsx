@@ -47,7 +47,7 @@ export function WelcomeModal() {
             exit={{ scale: 0.9, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
             className={cn(
-              "relative w-[90vw] max-w-2xl bg-[#0a0f1e] text-cyan-200 rounded-lg border-2 border-cyan-400/50 shadow-2xl shadow-cyan-500/20",
+              "relative w-[90vw] max-w-4xl bg-[#0a0f1e] text-cyan-200 rounded-lg border-2 border-cyan-400/50 shadow-2xl shadow-cyan-500/20",
               "font-mono" // Use a monospaced font for the system look
             )}
             style={{
