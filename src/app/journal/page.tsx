@@ -297,25 +297,25 @@ function DailyLogPage() {
         </p>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Log Your Day</CardTitle>
-                    <CardDescription>Fill in your accomplishments and activities for today.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {isLoading ? (
-                        <div className="space-y-6">
-                            <Skeleton className="h-10 w-full" />
-                            <Skeleton className="h-10 w-full" />
-                            <Skeleton className="h-10 w-full" />
-                            <Skeleton className="h-24 w-full" />
-                            <Skeleton className="h-10 w-24" />
-                        </div>
-                    ) : (
-                        <Form {...form}>
-                            <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-8">
+       <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleFormSubmit)} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Log Your Day</CardTitle>
+                        <CardDescription>Fill in your accomplishments and activities for today.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {isLoading ? (
+                            <div className="space-y-6">
+                                <Skeleton className="h-10 w-full" />
+                                <Skeleton className="h-10 w-full" />
+                                <Skeleton className="h-10 w-full" />
+                                <Skeleton className="h-24 w-full" />
+                                <Skeleton className="h-10 w-24" />
+                            </div>
+                        ) : (
+                            <div className="space-y-8">
                                 <FormField
                                     control={form.control}
                                     name="studyDuration"
@@ -397,39 +397,6 @@ function DailyLogPage() {
                                         )}
                                     />
                                 </div>
-                                
-                                {userProfile && userProfile.habits && userProfile.habits.length > 0 && (
-                                    <div>
-                                        <Separator className="my-6"/>
-                                        <div className="space-y-4">
-                                             <div className="flex items-center justify-between">
-                                                <h3 className="text-lg font-medium flex items-center gap-2"><Repeat /> Custom Habits</h3>
-                                                <Button variant="ghost" size="icon" onClick={() => setIsHabitManagerOpen(true)}>
-                                                    <PlusCircle className="size-5" />
-                                                    <span className="sr-only">Add or manage habits</span>
-                                                </Button>
-                                            </div>
-                                            {userProfile.habits.map(habit => (
-                                                <FormField
-                                                    key={habit.id}
-                                                    control={form.control}
-                                                    name={`customHabits.${habit.id}` as any}
-                                                    render={({ field }) => (
-                                                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                                                        <div className="space-y-0.5">
-                                                            <FormLabel className="text-base">{habit.name}</FormLabel>
-                                                        </div>
-                                                        <FormControl>
-                                                            <Switch checked={field.value} onCheckedChange={field.onChange} />
-                                                        </FormControl>
-                                                    </FormItem>
-                                                    )}
-                                                />
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
 
                                 <FormField
                                     control={form.control}
@@ -448,29 +415,72 @@ function DailyLogPage() {
                                     {isSubmitting ? <Loader2 className="mr-2 animate-spin" /> : <CheckCircle />}
                                     Save Today's Log
                                 </Button>
-                            </form>
-                        </Form>
-                    )}
-                </CardContent>
-            </Card>
-        </div>
-        <div className="lg:col-span-1">
-             <Card className="bg-gradient-to-br from-primary/80 to-primary text-primary-foreground">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Flame /> Current Abstinence Streak</CardTitle>
-                </CardHeader>
-                <CardContent className="text-center">
-                    {isLoading ? (
-                        <Skeleton className="h-24 w-24 rounded-full mx-auto bg-white/20" />
-                    ) : (
-                        <div className="text-6xl font-bold">{streak}</div>
-                    )}
-                    <p className="font-light mt-2">{streak === 1 ? 'Day' : 'Days'}</p>
-                    <p className="text-sm mt-4 opacity-80">Keep going! Every day is a victory.</p>
-                </CardContent>
-             </Card>
-        </div>
-      </div>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
+            <div className="lg:col-span-1 space-y-8">
+                <Card className="bg-gradient-to-br from-primary/80 to-primary text-primary-foreground">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><Flame /> Current Abstinence Streak</CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-center">
+                        {isLoading ? (
+                            <Skeleton className="h-24 w-24 rounded-full mx-auto bg-white/20" />
+                        ) : (
+                            <div className="text-6xl font-bold">{streak}</div>
+                        )}
+                        <p className="font-light mt-2">{streak === 1 ? 'Day' : 'Days'}</p>
+                        <p className="text-sm mt-4 opacity-80">Keep going! Every day is a victory.</p>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center justify-between">
+                            <span className="flex items-center gap-2"><Repeat /> Custom Habits</span>
+                            <Button variant="ghost" size="icon" onClick={() => setIsHabitManagerOpen(true)}>
+                                <PlusCircle className="size-5" />
+                                <span className="sr-only">Add or manage habits</span>
+                            </Button>
+                        </CardTitle>
+                        <CardDescription>Track your personal daily goals.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        {isLoading ? (
+                            <div className="space-y-3">
+                                <Skeleton className="h-12 w-full" />
+                                <Skeleton className="h-12 w-full" />
+                            </div>
+                        ) : userProfile?.habits && userProfile.habits.length > 0 ? (
+                           userProfile.habits.map(habit => (
+                                <FormField
+                                    key={habit.id}
+                                    control={form.control}
+                                    name={`customHabits.${habit.id}` as any}
+                                    render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                        <div className="space-y-0.5">
+                                            <FormLabel className="text-base">{habit.name}</FormLabel>
+                                        </div>
+                                        <FormControl>
+                                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                        </FormControl>
+                                    </FormItem>
+                                    )}
+                                />
+                            ))
+                        ) : (
+                            <p className="text-sm text-center text-muted-foreground py-4">
+                                No custom habits added yet. Click the '+' icon to add one.
+                            </p>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
+        </form>
+       </Form>
       <HabitManager
           isOpen={isHabitManagerOpen}
           setIsOpen={setIsHabitManagerOpen}
@@ -481,5 +491,3 @@ function DailyLogPage() {
 }
 
 export default withAuth(DailyLogPage);
-
-    
