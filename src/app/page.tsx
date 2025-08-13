@@ -189,25 +189,29 @@ function DashboardPage() {
 
       const generateQuest = async () => {
           const docSnap = await getDoc(questDocRef);
-          if (!docSnap.exists()) {
-              // No quest for today, check if today is a quest day
-              const todayDayOfWeek = new Date().getDay(); // 0 (Sun) - 6 (Sat)
-              if (profile.questDays?.includes(todayDayOfWeek)) {
-                  const newQuest: UnexpectedQuest = {
-                      id: todayStr,
-                      title: 'Unexpected Quest',
-                      description: 'A sudden mission has appeared. Complete it by the end of the day or face a penalty.',
-                      exercises: [
-                          { name: 'Push-ups', goal: 25, completed: false },
-                          { name: 'Sit-ups', goal: 35, completed: false },
-                          { name: 'Squats', goal: 40, completed: false },
-                          { name: 'Running', goal: 2, completed: false } // in km
-                      ],
-                      isCompleted: false,
-                      generatedAt: serverTimestamp(),
-                  };
-                  await setDoc(questDocRef, newQuest);
-              }
+          const questData = docSnap.data() as UnexpectedQuest | undefined;
+          const todayDayOfWeek = new Date().getDay(); // 0 (Sun) - 6 (Sat)
+          
+          // Check if today is a designated quest day
+          if (profile.questDays?.includes(todayDayOfWeek)) {
+            // If the quest doesn't exist OR it exists but hasn't been completed, (re)generate it.
+            // This allows updating the quest if the code changes.
+            if (!questData || !questData.isCompleted) {
+                const newQuest: UnexpectedQuest = {
+                    id: todayStr,
+                    title: 'Unexpected Quest',
+                    description: 'A sudden mission has appeared. Complete it by the end of the day or face a penalty.',
+                    exercises: [
+                        { name: 'Push-ups', goal: 25, completed: false },
+                        { name: 'Sit-ups', goal: 35, completed: false },
+                        { name: 'Squats', goal: 40, completed: false },
+                        { name: 'Running', goal: 2, completed: false } // in km
+                    ],
+                    isCompleted: false,
+                    generatedAt: serverTimestamp(),
+                };
+                await setDoc(questDocRef, newQuest);
+            }
           }
       };
       
@@ -475,7 +479,7 @@ function DashboardPage() {
                                 htmlFor={`ex-${ex.name}`}
                                 className={cn("text-sm font-medium leading-none", unexpectedQuest.isCompleted || ex.completed ? 'line-through text-muted-foreground' : '')}
                             >
-                                {ex.goal} {ex.name} {ex.name === 'Running' && 'km'}
+                                {ex.goal} {ex.name}{ex.name.endsWith('s') ? '' : 's'}{ex.name === 'Running' && 'km'}
                             </label>
                         </div>
                     ))}
