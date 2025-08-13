@@ -44,9 +44,10 @@ import { useToast } from '@/hooks/use-toast';
 import { Switch } from '@/components/ui/switch';
 import { Loader2, BookOpen, Brain, DollarSign, HeartHandshake, CheckCircle, Flame } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Slider } from '@/components/ui/slider';
 
 const logSchema = z.object({
-  studyDuration: z.coerce.number().min(0, 'Must be a positive number').optional(),
+  studyDuration: z.coerce.number().min(0).max(480, "Study duration cannot exceed 480 minutes (8 hours)").optional(),
   quranRead: z.boolean().default(false),
   expenses: z.coerce.number().min(0, 'Must be a positive number').optional(),
   abstained: z.boolean().default(false),
@@ -193,6 +194,8 @@ function DailyLogPage() {
     }
   };
 
+  const studyDurationValue = form.watch('studyDuration');
+
   return (
     <div className="container mx-auto p-4 md:p-8">
       <header className="mb-8">
@@ -229,8 +232,19 @@ function DailyLogPage() {
                                     name="studyDuration"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className="flex items-center gap-2"><Brain /> Study Duration (minutes)</FormLabel>
-                                            <FormControl><Input type="number" placeholder="0" {...field} /></FormControl>
+                                            <FormLabel className="flex items-center justify-between">
+                                                <span className='flex items-center gap-2'><Brain /> Study Duration</span>
+                                                <span className="text-sm font-normal text-muted-foreground">{field.value} minutes</span>
+                                            </FormLabel>
+                                            <FormControl>
+                                                <Slider
+                                                    min={0}
+                                                    max={480}
+                                                    step={15}
+                                                    defaultValue={[field.value ?? 0]}
+                                                    onValueChange={(value) => field.onChange(value[0])}
+                                                />
+                                            </FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -326,5 +340,3 @@ function DailyLogPage() {
 }
 
 export default withAuth(DailyLogPage);
-
-    
