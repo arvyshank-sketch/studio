@@ -38,6 +38,10 @@ const generateJournalPromptFlow = ai.defineFlow(
   },
   async () => {
     const {output} = await prompt();
-    return output!;
+    if (output === null) {
+        console.error("Journal prompt generation returned null, returning a default prompt.");
+        return "What is one thing you are grateful for today?";
+    }
+    return output;
   }
 );
