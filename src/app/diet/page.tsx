@@ -2,7 +2,7 @@
 'use client';
 
 import withAuth from "@/components/with-auth";
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -33,15 +33,14 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { DailyLog, MealEntry, UserProfile } from '@/lib/types';
-import { UtensilsCrossed, Trash2, CheckCircle } from 'lucide-react';
-import { format } from 'date-fns';
-import { MEALS_STORAGE_KEY } from '@/lib/constants';
-import { useSyncedLocalStorage } from '@/hooks/use-synced-local-storage';
+import { UtensilsCrossed, Trash2, CheckCircle, Loader2 } from 'lucide-react';
+import { format, startOfToday, endOfToday } from 'date-fns';
 import { useAuth } from "@/context/auth-context";
-import { runTransaction, doc, getDoc, setDoc } from "firebase/firestore";
+import { runTransaction, doc, getDoc, setDoc, collection, addDoc, onSnapshot, query, where, orderBy, deleteDoc, serverTimestamp, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { processGamification, XP_REWARDS } from "@/lib/gamification";
 import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const mealSchema = z.object({
   name: z.string().min(1, 'Meal name is required'),
@@ -53,32 +52,68 @@ type MealFormValues = z.infer<typeof mealSchema>;
 function DietPage() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const storageKey = user ? `${MEALS_STORAGE_KEY}-${user.uid}` : MEALS_STORAGE_KEY;
-  const [allMeals, setAllMeals] = useSyncedLocalStorage<MealEntry[]>(storageKey, []);
+
+  const [todaysMeals, setTodaysMeals] = useState<MealEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const form = useForm<MealFormValues>({
     resolver: zodResolver(mealSchema),
     defaultValues: { name: '', calories: 0 },
   });
   
-  const today = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
+  const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
 
-  const todaysMeals = useMemo(() => {
-    return allMeals.filter(meal => meal.date === today);
-  }, [allMeals, today]);
+  const mealCollectionRef = useMemo(() => {
+    if (user) {
+      return collection(db, 'users', user.uid, 'mealEntries');
+    }
+    return null;
+  }, [user]);
+
+  useEffect(() => {
+      if (!mealCollectionRef) return;
+      setIsLoading(true);
+
+      const todayStart = startOfToday();
+      const todayEnd = endOfToday();
+
+      const q = query(mealCollectionRef, 
+        where('date', '>=', todayStart), 
+        where('date', '<=', todayEnd), 
+        orderBy('date', 'desc')
+      );
+
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+          const mealsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MealEntry));
+          setTodaysMeals(mealsData);
+          setIsLoading(false);
+      }, (error) => {
+          console.error("Error fetching meal entries:", error);
+          toast({ variant: 'destructive', title: 'Error', description: "Could not fetch today's meals."});
+          setIsLoading(false);
+      });
+
+      return () => unsubscribe();
+  }, [mealCollectionRef, toast]);
+
 
   const onSubmit: SubmitHandler<MealFormValues> = async (data) => {
+    if (!user || !mealCollectionRef) return;
+
+    setIsSubmitting(true);
     const isFirstLogToday = todaysMeals.length === 0;
 
-    const newMeal: MealEntry = { ...data, id: Date.now(), date: today };
-    setAllMeals((prev) => [...prev, newMeal]);
-    form.reset();
+    const newMealData = { ...data, date: serverTimestamp() };
+    
+    try {
+        await addDoc(mealCollectionRef, newMealData);
+        form.reset();
 
-    // If it's the first meal logged today, award XP
-    if (isFirstLogToday && user) {
-        try {
+        // If it's the first meal logged today, award XP
+        if (isFirstLogToday) {
             const userDocRef = doc(db, 'users', user.uid);
-            const dailyLogRef = doc(db, 'users', user.uid, 'dailyLogs', today);
+            const dailyLogRef = doc(db, 'users', user.uid, 'dailyLogs', todayStr);
 
             await runTransaction(db, async (transaction) => {
                 const userProfileSnap = await transaction.get(userDocRef);
@@ -91,19 +126,19 @@ function DietPage() {
                 const profile = userProfileSnap.data() as UserProfile;
                 const dailyLog = (dailyLogSnap.exists() ? dailyLogSnap.data() : {}) as Partial<DailyLog>;
                 
-                // Avoid giving XP twice if the log was already marked
                 if (dailyLog.caloriesLogged) return;
 
                 const { updatedProfile } = await processGamification({
                     userProfile: profile,
-                    allLogs: [], // No need to check for badges here
+                    allLogs: [], 
                     newLog: { caloriesLogged: true },
+                    previousLog: null,
                     userId: user.uid,
                     transaction: transaction
                 });
                 
                 transaction.update(userDocRef, updatedProfile);
-                transaction.set(dailyLogRef, { caloriesLogged: true, date: today }, { merge: true });
+                transaction.set(dailyLogRef, { caloriesLogged: true, date: todayStr }, { merge: true });
             });
             
             toast({
@@ -111,16 +146,24 @@ function DietPage() {
                 description: "You've earned points for logging your meal.",
                 action: <div className="p-2 bg-green-500 text-white rounded-full"><CheckCircle size={24} /></div>,
             });
-        } catch(e) {
-            console.error("Failed to award XP for calorie logging", e);
-            toast({ variant: 'destructive', title: "Error", description: "Couldn't award XP for your meal log."})
         }
+    } catch (e) {
+        console.error("Failed to log meal or award XP:", e);
+        toast({ variant: 'destructive', title: "Error", description: "Couldn't save your meal log." });
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
-  const deleteMeal = useCallback((id: number) => {
-    setAllMeals((prev) => prev.filter((meal) => meal.id !== id));
-  },[setAllMeals]);
+  const deleteMeal = useCallback(async (id: string) => {
+    if (!mealCollectionRef) return;
+    try {
+        await deleteDoc(doc(mealCollectionRef, id));
+    } catch (e) {
+        console.error("Error deleting meal", e);
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete meal entry.'});
+    }
+  },[mealCollectionRef, toast]);
 
   const totalCalories = useMemo(
     () => todaysMeals.reduce((total, meal) => total + meal.calories, 0),
@@ -134,7 +177,7 @@ function DietPage() {
           Diet &amp; Calories
         </h1>
         <p className="text-muted-foreground">
-          Log your meals to track your daily calorie intake.
+          Log your meals to track your daily calorie intake. All data is saved securely online.
         </p>
       </header>
 
@@ -176,7 +219,10 @@ function DietPage() {
                     </FormItem>
                   )}
                 />
-                <Button type="submit" className="w-full">Add Meal</Button>
+                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                    {isSubmitting && <Loader2 className="mr-2 animate-spin" />}
+                    Add Meal
+                </Button>
               </form>
             </Form>
           </CardContent>
@@ -190,11 +236,18 @@ function DietPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {todaysMeals.length > 0 ? (
+            {isLoading ? (
+                 <div className="space-y-2">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                </div>
+            ) : todaysMeals.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Meal</TableHead>
+                    <TableHead>Time</TableHead>
                     <TableHead className="text-right">Calories</TableHead>
                     <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
@@ -203,6 +256,9 @@ function DietPage() {
                   {todaysMeals.map((meal) => (
                     <TableRow key={meal.id}>
                       <TableCell className="font-medium">{meal.name}</TableCell>
+                      <TableCell className="text-muted-foreground text-xs">
+                          {meal.date instanceof Timestamp ? format(meal.date.toDate(), 'p') : '...'}
+                      </TableCell>
                       <TableCell className="text-right">
                         {meal.calories}
                       </TableCell>

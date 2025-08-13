@@ -8,8 +8,8 @@ export type WeightEntry = {
 };
 
 export type MealEntry = {
-  id: number;
-  date: string;
+  id: string;
+  date: Timestamp | Date;
   name: string;
   calories: number;
 };

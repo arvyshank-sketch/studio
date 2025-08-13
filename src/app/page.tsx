@@ -44,13 +44,12 @@ import {
   runTransaction,
   getDoc,
   updateDoc,
+  Timestamp,
 } from 'firebase/firestore';
-import { eachDayOfInterval, format, subDays, differenceInCalendarDays, getWeek } from 'date-fns';
+import { eachDayOfInterval, format, subDays, differenceInCalendarDays, getWeek, startOfDay } from 'date-fns';
 import type { DashboardStats, WeightEntry, UserProfile, DailyLog, MealEntry, UnexpectedQuest, QuestExercise } from '@/lib/types';
 import { getLevel, getXpForLevel, badges as definedBadges, XP_REWARDS } from '@/lib/gamification';
 import { cn } from '@/lib/utils';
-import { useSyncedLocalStorage } from '@/hooks/use-synced-local-storage';
-import { MEALS_STORAGE_KEY } from '@/lib/constants';
 import {
   ResponsiveContainer,
   XAxis,
@@ -78,9 +77,6 @@ function DashboardPage() {
   const [challengeProgress, setChallengeProgress] = useState<{week: number; day: number} | null>(null);
   const [unexpectedQuest, setUnexpectedQuest] = useState<UnexpectedQuest | null>(null);
   const [isQuestLoading, setIsQuestLoading] = useState(true);
-  
-  const storageKey = user ? `${MEALS_STORAGE_KEY}-${user.uid}` : MEALS_STORAGE_KEY;
-  const [allMeals] = useSyncedLocalStorage<MealEntry[]>(storageKey, []);
 
   useEffect(() => {
     const getGreeting = () => {
@@ -248,9 +244,14 @@ function DashboardPage() {
         where('date', '<=', format(endOfToday, 'yyyy-MM-dd'))
       );
       
-      const [weightSnap, journalSnap] = await Promise.all([
+      const mealRef = collection(db, 'users', user.uid, 'mealEntries');
+      const sevenDaysAgo = startOfDay(subDays(new Date(), 6));
+      const mealQuery = query(mealRef, where('date', '>=', sevenDaysAgo), orderBy('date', 'desc'));
+
+      const [weightSnap, journalSnap, mealSnap] = await Promise.all([
           getDocs(weightQuery),
-          getDocs(journalQuery)
+          getDocs(journalQuery),
+          getDocs(mealQuery),
       ]);
       
       const weeklyWeights = weightSnap.docs.map(
@@ -265,6 +266,7 @@ function DashboardPage() {
       }
 
       const weeklyLogs = journalSnap.docs.map(doc => doc.data() as DailyLog);
+      const weeklyMeals = mealSnap.docs.map(doc => ({...doc.data(), id: doc.id }) as MealEntry);
 
       setStats({
         weeklyWeightChange: weightChange,
@@ -277,7 +279,11 @@ function DashboardPage() {
       const processedChartData = dateInterval.map(date => {
         const formattedDate = format(date, 'yyyy-MM-dd');
         const logForDay = weeklyLogs.find(log => log.date === formattedDate);
-        const mealsForDay = allMeals.filter(meal => meal.date === formattedDate);
+        
+        const mealsForDay = weeklyMeals.filter(meal => {
+            const mealDate = (meal.date as Timestamp).toDate();
+            return format(mealDate, 'yyyy-MM-dd') === formattedDate;
+        });
         const totalCalories = mealsForDay.reduce((sum, meal) => sum + meal.calories, 0);
 
         return {
@@ -294,7 +300,7 @@ function DashboardPage() {
     };
 
     fetchDashboardStats();
-  }, [user, allMeals]);
+  }, [user]);
   
   const currentLevel = useMemo(() => profile ? getLevel(profile.xp ?? 0) : 1, [profile]);
   const xpForCurrentLevel = useMemo(() => getXpForLevel(currentLevel), [currentLevel]);
