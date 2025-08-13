@@ -41,7 +41,8 @@ import {
   onSnapshot,
   setDoc,
   serverTimestamp,
-  runTransaction
+  runTransaction,
+  getDoc,
 } from 'firebase/firestore';
 import { eachDayOfInterval, format, subDays, differenceInCalendarDays } from 'date-fns';
 import type { DashboardStats, WeightEntry, UserProfile, DailyLog, MealEntry, UnexpectedQuest, QuestExercise } from '@/lib/types';
