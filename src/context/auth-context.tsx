@@ -29,6 +29,8 @@ const generateUsername = (email: string) => {
     return `${username}${randomSuffix}`;
 };
 
+const DEFAULT_AVATAR_URL = 'https://placehold.co/128x128.png?text=SJW';
+
 export const AuthContextProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,10 +42,8 @@ export const AuthContextProvider = ({ children }: { children: ReactNode }) => {
 
       if (!userDocSnap.exists()) {
         const newDisplayName = user.displayName || generateUsername(user.email!);
-        // Using an empty string for photoURL to trigger fallback logic
-        const photoURL = user.photoURL || '';
+        const photoURL = user.photoURL || DEFAULT_AVATAR_URL;
         try {
-          // We only update the profile if it's missing a display name or photo
           if (!user.displayName || !user.photoURL) {
             await updateProfile(user, { displayName: newDisplayName, photoURL: photoURL });
           }
@@ -57,9 +57,8 @@ export const AuthContextProvider = ({ children }: { children: ReactNode }) => {
             xp: 0,
             badges: [],
           });
-          // After creating the profile, reload the user object to get the latest data
           await user.reload();
-          setUser(auth.currentUser); // Update state with reloaded user
+          setUser(auth.currentUser);
         } catch (error) {
           console.error("Error creating new user entry:", error);
         }
@@ -81,7 +80,6 @@ export const AuthContextProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, []);
 
-  // Initial loader remains for the very first check
   if (loading) {
     return (
       <div className="flex h-screen w-screen items-center justify-center">
@@ -105,5 +103,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    

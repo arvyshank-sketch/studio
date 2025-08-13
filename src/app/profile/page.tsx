@@ -36,7 +36,6 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
-import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
 import SafeImage from '@/components/SafeImage';
 
@@ -142,7 +141,7 @@ function ProfilePage() {
     // In a real app, you would likely upload a file and get a URL.
     // For this prototype, we'll use the placeholder URL directly,
     // but the `data-ai-hint` will guide the final image replacement.
-    const finalUrl = `https://placehold.co/128x128.png?text=${encodeURIComponent(hint.replace(/\s+/g, '+'))}`;
+    const finalUrl = photoURL;
 
     try {
         await updateProfile(user, { photoURL: finalUrl });
