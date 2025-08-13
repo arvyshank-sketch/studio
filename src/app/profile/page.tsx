@@ -68,14 +68,14 @@ const getRewardIcon = (type: string) => {
 }
 
 const jinwooAvatars = [
-    { id: '1', src: 'https://placehold.co/128x128.png', hint: 'sung jin woo cool'},
-    { id: '2', src: 'https://placehold.co/128x128.png', hint: 'sung jin woo monarch'},
-    { id: '3', src: 'https://placehold.co/128x128.png', hint: 'sung jin woo dagger'},
-    { id: '4', src: 'https://placehold.co/128x128.png', hint: 'sung jin woo glowing'},
-    { id: '5', src: 'https://placehold.co/128x128.png', hint: 'sung jin woo shadow'},
-    { id: '6', src: 'https://placehold.co/128x128.png', hint: 'sung jin woo smile'},
-    { id: '7', src: 'https://placehold.co/128x128.png', hint: 'sung jin woo fighting'},
-    { id: '8', src: 'https://placehold.co/128x128.png', hint: 'sung jin woo portrait'},
+    { id: '1', src: 'https://placehold.co/128x128.png?text=SJW+Cool', hint: 'sung jin woo cool'},
+    { id: '2', src: 'https://placehold.co/128x128.png?text=SJW+Monarch', hint: 'sung jin woo monarch'},
+    { id: '3', src: 'https://placehold.co/128x128.png?text=SJW+Dagger', hint: 'sung jin woo dagger'},
+    { id: '4', src: 'https://placehold.co/128x128.png?text=SJW+Glowing', hint: 'sung jin woo glowing'},
+    { id: '5', src: 'https://placehold.co/128x128.png?text=SJW+Shadow', hint: 'sung jin woo shadow'},
+    { id: '6', src: 'https://placehold.co/128x128.png?text=SJW+Smile', hint: 'sung jin woo smile'},
+    { id: '7', src: 'https://placehold.co/128x128.png?text=SJW+Fighting', hint: 'sung jin woo fighting'},
+    { id: '8', src: 'https://placehold.co/128x128.png?text=SJW+Portrait', hint: 'sung jin woo portrait'},
 ];
 
 
@@ -137,9 +137,7 @@ function ProfilePage() {
     if (!user) return;
     setIsUpdatingAvatar(true);
 
-    // Note: The actual image replacement based on `data-ai-hint` happens outside this component's logic.
-    // We just need to pass a valid placeholder URL to Firebase.
-    const finalUrl = `https://placehold.co/128x128.png?text=${hint.replace(/\s/g, '+')}`;
+    const finalUrl = avatarUrl; // The src is already a valid placehold.co URL
 
     try {
         // Update Firebase Auth profile
@@ -406,3 +404,5 @@ function ProfilePage() {
 }
 
 export default withAuth(ProfilePage);
+
+    
