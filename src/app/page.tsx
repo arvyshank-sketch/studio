@@ -142,6 +142,12 @@ function DashboardPage() {
       return definedBadges.filter(b => profile.badges?.includes(b.id));
   }, [profile]);
 
+  const formattedUsername = useMemo(() => {
+    const name = user?.displayName || user?.email?.split('@')[0] || 'User';
+    const nameWithoutNumbers = name.replace(/[0-9]/g, '');
+    return nameWithoutNumbers.charAt(0).toUpperCase() + nameWithoutNumbers.slice(1);
+  }, [user]);
+
 
   const StatCard = ({
     title,
@@ -193,7 +199,7 @@ function DashboardPage() {
       <header className="flex items-start justify-between gap-4">
         <div className="flex-1">
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground break-words">
-            {greeting}, {user?.displayName?.split(' ')[0] || user?.email}!
+            {greeting}, {formattedUsername}!
           </h1>
           <p className="text-muted-foreground text-lg mt-1">
             Your personal dashboard for holistic growth.
