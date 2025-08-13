@@ -16,11 +16,12 @@ import {
   serverTimestamp,
   Timestamp,
 } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import { useAuth } from '@/context/auth-context';
 import withAuth from '@/components/with-auth';
 import type { JournalEntry } from '@/lib/types';
 import { format } from 'date-fns';
+import { generateJournalPrompt } from '@/ai/flows/generate-journal-prompt';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -38,7 +39,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   Form,
@@ -59,7 +59,8 @@ import {
   Trash2,
   FileEdit,
   Loader2,
-  X,
+  Sparkles,
+  PenSquare,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -81,6 +82,9 @@ function JournalPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
+
+  const [prompt, setPrompt] = useState<string | null>(null);
+  const [isPromptLoading, setIsPromptLoading] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
@@ -138,7 +142,7 @@ function JournalPage() {
     }
 
     if (selectedTag) {
-      result = result.filter((entry) => entry.tags.includes(selectedTag));
+      result = result.filter((entry) => (entry.tags || []).includes(selectedTag));
     }
 
     setFilteredEntries(result);
@@ -146,9 +150,33 @@ function JournalPage() {
   
   const allTags = useMemo(() => {
     const tags = new Set<string>();
-    entries.forEach(entry => entry.tags.forEach(tag => tags.add(tag)));
+    entries.forEach(entry => (entry.tags || []).forEach(tag => tags.add(tag)));
     return Array.from(tags).sort();
   }, [entries]);
+
+  const handleGetPrompt = async () => {
+    setIsPromptLoading(true);
+    try {
+        const newPrompt = await generateJournalPrompt();
+        setPrompt(newPrompt);
+    } catch (error) {
+        console.error("Failed to get journal prompt", error);
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Could not generate a new prompt. Please try again.',
+        })
+    } finally {
+        setIsPromptLoading(false);
+    }
+  }
+
+  const handleUsePrompt = () => {
+    if (!prompt) return;
+    setEditingEntry(null);
+    form.reset({ title: prompt, content: '', tags: 'prompt' });
+    setIsDialogOpen(true);
+  }
 
   const handleFormSubmit = async (data: EntryFormValues) => {
     if (!journalCollectionRef) return;
@@ -201,7 +229,7 @@ function JournalPage() {
       form.reset({
           title: entry.title,
           content: entry.content,
-          tags: entry.tags.join(', '),
+          tags: (entry.tags || []).join(', '),
       });
       setIsDialogOpen(true);
   };
@@ -228,6 +256,41 @@ function JournalPage() {
           Your private space to reflect, record, and grow.
         </p>
       </header>
+
+      {/* AI Prompt Section */}
+       <Card className="mb-8 bg-primary/5 border-primary/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Sparkles className="text-primary" />
+            AI-Powered Prompt
+          </CardTitle>
+          <CardDescription>
+            Stuck on what to write? Get a little inspiration from our AI.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isPromptLoading ? (
+             <Skeleton className="h-6 w-3/4" />
+          ) : prompt ? (
+            <p className="font-medium text-foreground">{prompt}</p>
+          ) : (
+             <p className="text-muted-foreground italic">Click the button to generate a new prompt.</p>
+          )}
+        </CardContent>
+        <CardFooter className="flex gap-2">
+            <Button onClick={handleGetPrompt} disabled={isPromptLoading}>
+                 {isPromptLoading ? <Loader2 className="animate-spin" /> : <Sparkles />}
+                Get New Prompt
+            </Button>
+            {prompt && (
+                <Button variant="secondary" onClick={handleUsePrompt}>
+                    <PenSquare />
+                    Use This Prompt
+                </Button>
+            )}
+        </CardFooter>
+      </Card>
+
 
       {/* Controls: Search, Filter, Add New */}
       <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center">
@@ -294,7 +357,7 @@ function JournalPage() {
                   {entry.content}
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  {entry.tags.map((tag) => (
+                  {(entry.tags || []).map((tag) => (
                     <Badge key={tag} variant="secondary" onClick={() => setSelectedTag(tag)} className="cursor-pointer">
                       {tag}
                     </Badge>
