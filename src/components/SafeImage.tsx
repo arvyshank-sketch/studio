@@ -9,6 +9,7 @@ type Props = Omit<ImageProps, "src" | "alt"> & {
   alt?: string | null;
   fallbackSrc?: string;
   unopt?: boolean; // set true if you haven't configured domains yet
+  "data-ai-hint"?: string;
 };
 
 export default function SafeImage({

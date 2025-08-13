@@ -69,14 +69,14 @@ const getRewardIcon = (type: string) => {
 }
 
 const jinwooAvatars = [
-    { id: '1', src: 'https://placehold.co/128x128.png?text=SJW+Cool', hint: 'sung jin woo cool'},
-    { id: '2', src: 'https://placehold.co/128x128.png?text=SJW+Monarch', hint: 'sung jin woo monarch'},
-    { id: '3', src: 'https://placehold.co/128x128.png?text=SJW+Dagger', hint: 'sung jin woo dagger'},
-    { id: '4', src: 'https://placehold.co/128x128.png?text=SJW+Glowing', hint: 'sung jin woo glowing'},
-    { id: '5', src: 'https://placehold.co/128x128.png?text=SJW+Shadow', hint: 'sung jin woo shadow'},
-    { id: '6', src: 'https://placehold.co/128x128.png?text=SJW+Smile', hint: 'sung jin woo smile'},
-    { id: '7', src: 'https://placehold.co/128x128.png?text=SJW+Fighting', hint: 'sung jin woo fighting'},
-    { id: '8', src: 'https://placehold.co/128x128.png?text=SJW+Portrait', hint: 'sung jin woo portrait'},
+    { id: '1', src: 'https://placehold.co/128x128.png', hint: 'sung jin woo cool'},
+    { id: '2', src: 'https://placehold.co/128x128.png', hint: 'sung jin woo monarch'},
+    { id: '3', src: 'https://placehold.co/128x128.png', hint: 'sung jin woo dagger'},
+    { id: '4', src: 'https://placehold.co/128x128.png', hint: 'sung jin woo glowing'},
+    { id: '5', src: 'https://placehold.co/128x128.png', hint: 'sung jin woo shadow'},
+    { id: '6', src: 'https://placehold.co/128x128.png', hint: 'sung jin woo smile'},
+    { id: '7', src: 'https://placehold.co/128x128.png', hint: 'sung jin woo fighting'},
+    { id: '8', src: 'https://placehold.co/128x128.png', hint: 'sung jin woo portrait'},
 ];
 
 const DEFAULT_AVATAR_URL = 'https://placehold.co/128x128.png?text=SJW';
@@ -135,11 +135,14 @@ function ProfilePage() {
     router.push('/login');
   };
 
-  const handleAvatarSelect = async (avatarUrl: string, hint: string) => {
+  const handleAvatarSelect = async (photoURL: string, hint: string) => {
     if (!user) return;
     setIsUpdatingAvatar(true);
-
-    const finalUrl = avatarUrl; 
+    
+    // In a real app, you would likely upload a file and get a URL.
+    // For this prototype, we'll use the placeholder URL directly,
+    // but the `data-ai-hint` will guide the final image replacement.
+    const finalUrl = `https://placehold.co/128x128.png?text=${encodeURIComponent(hint.replace(/\s+/g, '+'))}`;
 
     try {
         await updateProfile(user, { photoURL: finalUrl });
@@ -255,6 +258,7 @@ function ProfilePage() {
                         width={128}
                         height={128}
                         className="aspect-square object-cover"
+                        data-ai-hint={avatar.hint}
                         unopt={false}
                     />
                 </button>
