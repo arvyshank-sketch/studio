@@ -157,7 +157,6 @@ function DashboardPage() {
           date: format(date, 'MMM d'),
           study: logForDay?.studyDuration || 0,
           quran: logForDay?.quranPagesRead || 0,
-          expenses: logForDay?.expenses || 0,
           calories: totalCalories,
         };
       });
@@ -377,14 +376,12 @@ function DashboardPage() {
               <ComposedChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" />
                 <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis yAxisId="left" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis yAxisId="right" orientation="right" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend wrapperStyle={{fontSize: "12px"}} />
-                <Bar yAxisId="left" dataKey="calories" name="Calories" fill="hsl(var(--primary))" barSize={20} unit=" kcal" />
-                <Bar yAxisId="left" dataKey="expenses" name="Expenses" fill="hsl(var(--accent))" barSize={20} unit=" $" />
-                <Line yAxisId="right" type="monotone" dataKey="study" name="Study" stroke="hsl(var(--chart-2))" strokeWidth={2} unit=" hrs" />
-                <Line yAxisId="right" type="monotone" dataKey="quran" name="Quran" stroke="hsl(var(--chart-4))" strokeWidth={2} unit=" pgs" />
+                <Bar dataKey="calories" name="Calories" fill="hsl(var(--primary))" barSize={20} unit=" kcal" />
+                <Line type="monotone" dataKey="study" name="Study" stroke="hsl(var(--chart-2))" strokeWidth={2} unit=" hrs" />
+                <Line type="monotone" dataKey="quran" name="Quran" stroke="hsl(var(--chart-4))" strokeWidth={2} unit=" pgs" />
               </ComposedChart>
             </ResponsiveContainer>
           ) : (
@@ -403,5 +400,3 @@ function DashboardPage() {
 }
 
 export default withAuth(DashboardPage);
-
-    
