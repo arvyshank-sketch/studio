@@ -238,13 +238,26 @@ function DashboardPage() {
       const endOfToday = new Date();
       const startOfLast7Days = subDays(endOfToday, 6);
 
+      // Parallelize fetches
       const weightRef = collection(db, 'users', user.uid, 'weightEntries');
       const weightQuery = query(
         weightRef,
         where('date', '>=', startOfLast7Days),
         orderBy('date', 'asc')
       );
-      const weightSnap = await getDocs(weightQuery);
+
+      const journalRef = collection(db, 'users', user.uid, 'dailyLogs');
+      const journalQuery = query(
+        journalRef,
+        where('date', '>=', format(startOfLast7Days, 'yyyy-MM-dd')),
+        where('date', '<=', format(endOfToday, 'yyyy-MM-dd'))
+      );
+      
+      const [weightSnap, journalSnap] = await Promise.all([
+          getDocs(weightQuery),
+          getDocs(journalQuery)
+      ]);
+      
       const weeklyWeights = weightSnap.docs.map(
         (doc) => doc.data() as WeightEntry
       );
@@ -256,22 +269,12 @@ function DashboardPage() {
         weightChange = lastWeight - firstWeight;
       }
 
-      const journalRef = collection(db, 'users', user.uid, 'dailyLogs');
-      const journalQuery = query(
-        journalRef,
-        where('date', '>=', format(startOfLast7Days, 'yyyy-MM-dd')),
-        where('date', '<=', format(endOfToday, 'yyyy-MM-dd'))
-      );
-      const journalSnap = await getDocs(journalQuery);
       const weeklyLogs = journalSnap.docs.map(doc => doc.data() as DailyLog);
-
-      let longestStreak = 0;
 
       setStats({
         weeklyWeightChange: weightChange,
         weeklyJournalEntries: weeklyLogs.length,
-        longestHabitStreak: longestStreak,
-        calories: 0 // Will be calculated with meals data
+        calories: 0 // Will be calculated with meals data from local storage
       });
       
       const dateInterval = eachDayOfInterval({ start: startOfLast7Days, end: endOfToday });
@@ -545,7 +548,7 @@ function DashboardPage() {
 
 
       {/* Stats Section */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
         <StatCard
           title="Weekly Weight Change"
           value={stats?.weeklyWeightChange.toFixed(1) ?? '0.0'}
@@ -564,13 +567,6 @@ function DashboardPage() {
           value={stats?.weeklyJournalEntries ?? 0}
           unit="/7"
           icon={<PenSquare className="h-5 w-5 text-muted-foreground" />}
-          isLoading={isLoading}
-        />
-        <StatCard
-          title="Longest Abstinence Streak"
-          value={stats?.longestHabitStreak ?? 0}
-          unit=" days"
-          icon={<Flame className="h-5 w-5 text-muted-foreground" />}
           isLoading={isLoading}
         />
       </div>
@@ -703,9 +699,5 @@ function DashboardPage() {
 }
 
 export default withAuth(DashboardPage);
-
-    
-
-    
 
     

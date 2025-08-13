@@ -85,7 +85,6 @@ export type UserProfile = {
 export type DashboardStats = {
   weeklyWeightChange: number;
   weeklyJournalEntries: number;
-  longestHabitStreak: number;
   calories: number;
 };
 
@@ -103,3 +102,5 @@ export type UnexpectedQuest = {
     isCompleted: boolean;
     generatedAt: Timestamp | any;
 }
+
+    
