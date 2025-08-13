@@ -23,7 +23,9 @@ import {
   Book,
   Utensils,
   IndianRupee,
+  LogOut,
 } from 'lucide-react';
+import { auth } from '@/lib/firebase';
 import { useAuth } from '@/context/auth-context';
 import { useTheme } from '@/hooks/use-theme';
 import { useState, useEffect, useMemo } from 'react';
@@ -45,23 +47,20 @@ import { useSyncedLocalStorage } from '@/hooks/use-synced-local-storage';
 import { MEALS_STORAGE_KEY } from '@/lib/constants';
 import {
   ResponsiveContainer,
-  ComposedChart,
   XAxis,
   YAxis,
   Tooltip,
-  Legend,
   CartesianGrid,
-  Bar,
-  Line,
   AreaChart,
   Area,
-  BarChart as RechartsBarChart,
 } from 'recharts';
+import { useRouter } from 'next/navigation';
 
 
 function DashboardPage() {
   const { user } = useAuth();
   const { theme, setTheme } = useTheme();
+  const router = useRouter();
   const [greeting, setGreeting] = useState('');
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -70,6 +69,11 @@ function DashboardPage() {
   
   const storageKey = user ? `${MEALS_STORAGE_KEY}-${user.uid}` : MEALS_STORAGE_KEY;
   const [allMeals] = useSyncedLocalStorage<MealEntry[]>(storageKey, []);
+
+  const handleSignOut = async () => {
+    await auth.signOut();
+    router.push('/login');
+  };
 
 
   useEffect(() => {
@@ -275,16 +279,27 @@ function DashboardPage() {
             Your personal dashboard for holistic growth.
           </p>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="flex-shrink-0"
-          onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-        >
-          <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-          <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-          <span className="sr-only">Toggle theme</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="flex-shrink-0"
+            onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+          >
+            <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+            <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+            <span className="sr-only">Toggle theme</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleSignOut}
+            title="Sign Out"
+          >
+            <LogOut className="size-5" />
+            <span className="sr-only">Sign Out</span>
+          </Button>
+        </div>
       </header>
 
       {/* Gamification Section */}
