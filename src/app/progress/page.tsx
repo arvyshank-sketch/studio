@@ -43,7 +43,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import type { ProgressEntry } from '@/lib/types';
 import { useSyncedLocalStorage } from '@/hooks/use-synced-local-storage';
 import { PROGRESS_HISTORY_KEY } from '@/lib/constants';
-
+import withAuth from '@/components/with-auth';
+import { useAuth } from '@/context/auth-context';
 
 const progressSchema = z.object({
   photo: z
@@ -55,11 +56,13 @@ const progressSchema = z.object({
 
 type ProgressFormValues = z.infer<typeof progressSchema>;
 
-export default function ProgressPage() {
+function ProgressPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<AnalyzePhysicalProgressOutput | null>(null);
-  const [history, setHistory] = useSyncedLocalStorage<ProgressEntry[]>(PROGRESS_HISTORY_KEY, []);
+  const storageKey = user ? `${PROGRESS_HISTORY_KEY}-${user.uid}` : PROGRESS_HISTORY_KEY;
+  const [history, setHistory] = useSyncedLocalStorage<ProgressEntry[]>(storageKey, []);
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<ProgressFormValues>({
@@ -408,3 +411,5 @@ export default function ProgressPage() {
     </div>
   );
 }
+
+export default withAuth(ProgressPage);

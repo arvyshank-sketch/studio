@@ -1,5 +1,6 @@
 'use client';
 
+import withAuth from '@/components/with-auth';
 import Link from 'next/link';
 import {
   Card,
@@ -9,6 +10,7 @@ import {
   CardContent,
 } from '@/components/ui/card';
 import { ArrowRight, BookMarked, Sparkles, TrendingUp, UtensilsCrossed } from 'lucide-react';
+import { useAuth } from '@/context/auth-context';
 
 const featureCards = [
   {
@@ -37,12 +39,14 @@ const featureCards = [
   },
 ];
 
-export default function DashboardPage() {
+function DashboardPage() {
+  const { user } = useAuth();
+  
   return (
     <div className="flex flex-col gap-8 p-4 md:p-8">
       <header>
         <h1 className="text-4xl font-bold tracking-tight text-foreground">
-          Welcome to Synergy
+          Welcome to Synergy, {user?.email?.split('@')[0] || 'User'}!
         </h1>
         <p className="text-muted-foreground">Your personal dashboard for holistic growth.</p>
       </header>
@@ -70,3 +74,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+export default withAuth(DashboardPage);

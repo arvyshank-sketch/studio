@@ -37,6 +37,8 @@ import { TrendingUp, Trash2, Weight as WeightIcon } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useSyncedLocalStorage } from '@/hooks/use-synced-local-storage';
 import { WEIGHT_STORAGE_KEY } from '@/lib/constants';
+import withAuth from '@/components/with-auth';
+import { useAuth } from '@/context/auth-context';
 
 const weightSchema = z.object({
   weight: z.coerce.number().positive('Weight must be a positive number'),
@@ -44,9 +46,11 @@ const weightSchema = z.object({
 
 type WeightFormValues = z.infer<typeof weightSchema>;
 
-export default function WeightPage() {
+function WeightPage() {
   const { toast } = useToast();
-  const [entries, setEntries] = useSyncedLocalStorage<WeightEntry[]>(WEIGHT_STORAGE_KEY, []);
+  const { user } = useAuth();
+  const storageKey = user ? `${WEIGHT_STORAGE_KEY}-${user.uid}` : WEIGHT_STORAGE_KEY;
+  const [entries, setEntries] = useSyncedLocalStorage<WeightEntry[]>(storageKey, []);
 
   const form = useForm<WeightFormValues>({
     resolver: zodResolver(weightSchema),
@@ -191,7 +195,7 @@ export default function WeightPage() {
             <CardDescription>
               Your weight changes visualized.
             </CardDescription>
-          </CardHeader>
+          </Header>
           <CardContent className="h-[300px] w-full pr-8">
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -244,3 +248,5 @@ export default function WeightPage() {
     </div>
   );
 }
+
+export default withAuth(WeightPage);

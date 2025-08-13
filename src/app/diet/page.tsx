@@ -35,6 +35,8 @@ import { UtensilsCrossed, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { MEALS_STORAGE_KEY } from '@/lib/constants';
 import { useSyncedLocalStorage } from '@/hooks/use-synced-local-storage';
+import withAuth from '@/components/with-auth';
+import { useAuth } from '@/context/auth-context';
 
 const mealSchema = z.object({
   name: z.string().min(1, 'Meal name is required'),
@@ -43,8 +45,10 @@ const mealSchema = z.object({
 
 type MealFormValues = z.infer<typeof mealSchema>;
 
-export default function DietPage() {
-  const [allMeals, setAllMeals] = useSyncedLocalStorage<MealEntry[]>(MEALS_STORAGE_KEY, []);
+function DietPage() {
+  const { user } = useAuth();
+  const storageKey = user ? `${MEALS_STORAGE_KEY}-${user.uid}` : MEALS_STORAGE_KEY;
+  const [allMeals, setAllMeals] = useSyncedLocalStorage<MealEntry[]>(storageKey, []);
   
   const form = useForm<MealFormValues>({
     resolver: zodResolver(mealSchema),
@@ -183,3 +187,5 @@ export default function DietPage() {
     </div>
   );
 }
+
+export default withAuth(DietPage);

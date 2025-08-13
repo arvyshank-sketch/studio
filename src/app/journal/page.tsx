@@ -36,6 +36,8 @@ import {
 import { Flame } from 'lucide-react';
 import { JOURNAL_STORAGE_KEY } from '@/lib/constants';
 import { useSyncedLocalStorage } from '@/hooks/use-synced-local-storage';
+import withAuth from '@/components/with-auth';
+import { useAuth } from '@/context/auth-context';
 
 const journalSchema = z.object({
   studyHours: z.coerce.number().min(0),
@@ -46,9 +48,11 @@ const journalSchema = z.object({
 
 type JournalFormValues = z.infer<typeof journalSchema>;
 
-export default function JournalPage() {
+function JournalPage() {
   const { toast } = useToast();
-  const [entries, setEntries] = useSyncedLocalStorage<JournalEntry[]>(JOURNAL_STORAGE_KEY, []);
+  const { user } = useAuth();
+  const storageKey = user ? `${JOURNAL_STORAGE_KEY}-${user.uid}` : JOURNAL_STORAGE_KEY;
+  const [entries, setEntries] = useSyncedLocalStorage<JournalEntry[]>(storageKey, []);
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   const form = useForm<JournalFormValues>({
@@ -90,7 +94,6 @@ export default function JournalPage() {
     
     const todayIsTracked = sortedAbstinenceDays.some(d => isSameDay(d, lastDate));
     if (!todayIsTracked) {
-        // If today is not marked as abstained, start checking from yesterday
         lastDate.setDate(lastDate.getDate() - 1);
     }
 
@@ -99,7 +102,6 @@ export default function JournalPage() {
             currentStreak++;
             lastDate.setDate(lastDate.getDate() - 1);
         } else {
-            // Break the loop if there's a gap in the streak
             break;
         }
     }
@@ -255,3 +257,5 @@ export default function JournalPage() {
     </div>
   );
 }
+
+export default withAuth(JournalPage);
