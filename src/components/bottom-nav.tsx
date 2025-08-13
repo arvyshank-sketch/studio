@@ -28,7 +28,7 @@ const links: NavLink[] = [
   },
   {
     href: '/journal',
-    label: 'Daily Log',
+    label: 'Daily Quest',
     icon: BookOpenCheck,
   },
    {
@@ -82,3 +82,5 @@ export function BottomNav() {
     </div>
   );
 }
+
+    

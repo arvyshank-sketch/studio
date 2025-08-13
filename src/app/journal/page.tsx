@@ -218,7 +218,7 @@ function DailyLogPage() {
         toast({
           variant: 'destructive',
           title: 'Error',
-          description: 'Could not fetch today\'s log.',
+          description: "Could not fetch today's quest log.",
         });
       } finally {
         setIsLoading(false);
@@ -281,7 +281,7 @@ function DailyLogPage() {
       setStreak(newStreak);
 
       toast({
-        title: 'Log Saved!',
+        title: 'Quest Log Saved!',
         description: "Your progress, XP, and badges have been updated.",
         action: <div className="p-2 bg-green-500 text-white rounded-full"><CheckCircle size={24} /></div>,
       });
@@ -290,7 +290,7 @@ function DailyLogPage() {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Could not save your log.',
+        description: 'Could not save your quest log.',
       });
     } finally {
       setIsSubmitting(false);
@@ -301,7 +301,7 @@ function DailyLogPage() {
     <div className="container mx-auto p-4 md:p-8">
       <header className="mb-8">
         <h1 className="text-4xl font-bold tracking-tight text-foreground">
-          Daily Log
+          Daily Quest
         </h1>
         <p className="text-muted-foreground">
           Track your core activities for {format(new Date(), 'MMMM d, yyyy')}.
@@ -313,7 +313,7 @@ function DailyLogPage() {
             <div className="lg:col-span-2">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Log Your Day</CardTitle>
+                        <CardTitle>Log Your Quest</CardTitle>
                         <CardDescription>Fill in your accomplishments and activities for today.</CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -462,7 +462,7 @@ function DailyLogPage() {
                                 />
                                 <Button type="submit" disabled={isSubmitting}>
                                     {isSubmitting ? <Loader2 className="mr-2 animate-spin" /> : <CheckCircle />}
-                                    Save Today's Log
+                                    Complete Quest
                                 </Button>
                             </div>
                         )}
@@ -498,5 +498,7 @@ function DailyLogPage() {
 }
 
 export default withAuth(DailyLogPage);
+
+    
 
     

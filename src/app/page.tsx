@@ -1,3 +1,4 @@
+
 'use client';
 
 import withAuth from '@/components/with-auth';
@@ -215,7 +216,7 @@ function DashboardPage() {
   }, [profile]);
 
   const formattedUsername = useMemo(() => {
-    const name = user?.displayName || user?.email?.split('@')[0] || 'User';
+    const name = user?.displayName || user?.email?.split('@')[0] || 'Player';
     const nameWithoutNumbers = name.replace(/[0-9]/g, '');
     return nameWithoutNumbers.charAt(0).toUpperCase() + nameWithoutNumbers.slice(1);
   }, [user]);
@@ -288,7 +289,7 @@ function DashboardPage() {
             {greeting}, {formattedUsername}!
           </h1>
           <p className="text-muted-foreground text-lg mt-1">
-            Your personal dashboard for holistic growth.
+            Welcome, Player. Your personal dashboard for holistic growth.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -528,3 +529,5 @@ function DashboardPage() {
 }
 
 export default withAuth(DashboardPage);
+
+    
