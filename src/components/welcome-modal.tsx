@@ -75,7 +75,7 @@ export function WelcomeModal() {
 
             {/* Body */}
             <div className="p-10 text-center">
-              <p className="text-xl tracking-widest">[ Welcome, player. ]</p>
+              <p className="text-xl tracking-widest whitespace-nowrap">[ Welcome, player. ]</p>
             </div>
           </motion.div>
         </motion.div>
