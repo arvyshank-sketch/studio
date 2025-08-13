@@ -1,4 +1,4 @@
-# Synergy
+i# Synergy
 
 Synergy is a personal development application built with Next.js, designed to help you track and improve various aspects of your life.
 

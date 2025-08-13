@@ -7,9 +7,9 @@ import {
   useEffect,
   type ReactNode,
 } from 'react';
-import { onAuthStateChanged, type User } from 'firebase/auth';
+import { onAuthStateChanged, type User, updateProfile } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 
 interface AuthContextType {
@@ -22,6 +22,12 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
 });
 
+const generateUsername = (email: string) => {
+    const username = email.split('@')[0];
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    return `${username}${randomSuffix}`;
+};
+
 export const AuthContextProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -29,20 +35,31 @@ export const AuthContextProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // User is signed in. Check if user document exists, if not create it.
+        // User is signed in.
         const userDocRef = doc(db, 'users', user.uid);
         const userDocSnap = await getDoc(userDocRef);
 
         if (!userDocSnap.exists()) {
-          // Create user document
+          // New user, create user document
+          const newDisplayName = user.displayName || generateUsername(user.email!);
+          
           await setDoc(userDocRef, {
             email: user.email,
-            displayName: user.displayName,
+            displayName: newDisplayName,
             photoURL: user.photoURL,
             createdAt: new Date(),
           });
+          
+          // Update the user's profile in Firebase Auth as well
+          await updateProfile(user, { displayName: newDisplayName });
+          // Reload user to get updated info
+          await user.reload(); 
+          setUser(auth.currentUser);
+
+        } else {
+           setUser(user);
         }
-        setUser(user);
+
       } else {
         // User is signed out
         setUser(null);
