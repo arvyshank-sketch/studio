@@ -10,7 +10,7 @@ import {
   CardDescription,
   CardContent,
 } from '@/components/ui/card';
-import { ArrowRight, BookMarked, Sparkles, UtensilsCrossed, Weight, Moon, Sun } from 'lucide-react';
+import { ArrowRight, BookMarked, Sparkles, UtensilsCrossed, Weight, Moon, Sun, Target } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { useTheme } from '@/hooks/use-theme';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,12 @@ const featureCards = [
     description: "Log your studies, reading, and daily habits.",
     href: '/journal',
     icon: <BookMarked className="size-8 text-primary" />,
+  },
+  {
+    title: 'Habit Tracker',
+    description: 'Build consistency with daily habit tracking.',
+    href: '/habits',
+    icon: <Target className="size-8 text-primary" />,
   },
   {
     title: 'Weight Tracking',
@@ -78,7 +84,7 @@ function DashboardPage() {
         </Button>
       </header>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {featureCards.map((feature) => (
           <Link href={feature.href} key={feature.title} className="flex">
             <Card className="flex w-full flex-col justify-between transition-all hover:shadow-lg hover:scale-[1.02] dark:bg-card dark:hover:border-primary/50">

@@ -12,6 +12,7 @@ import {
   Utensils,
   LogOut,
   Weight,
+  Target,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
@@ -35,6 +36,11 @@ const links: NavLink[] = [
     href: '/journal',
     label: 'Journal',
     icon: BookOpenCheck,
+  },
+  {
+    href: '/habits',
+    label: 'Habits',
+    icon: Target,
   },
    {
     href: '/diet',
@@ -67,7 +73,7 @@ export function BottomNav() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur-sm">
-      <nav className="flex justify-around items-center h-16">
+      <nav className="grid h-16 grid-cols-7 items-center justify-around">
         {links.map((link) => {
           const isActive = pathname === link.href;
           return (
