@@ -188,7 +188,7 @@ function DashboardPage() {
     };
 
     fetchDashboardStats();
-  }, [user, allMeals]);
+  }, [user, allMeals, profile]);
   
   const currentLevel = useMemo(() => profile ? getLevel(profile.xp ?? 0) : 1, [profile]);
   const xpForCurrentLevel = useMemo(() => getXpForLevel(currentLevel), [currentLevel]);
