@@ -44,17 +44,33 @@ import { useToast }from '@/hooks/use-toast';
 import { Switch }from '@/components/ui/switch';
 import { Loader2, BookOpen, Brain, DollarSign, HeartHandshake, CheckCircle, Flame }from 'lucide-react';
 import { Skeleton }from '@/components/ui/skeleton';
-import { Slider }from '@/components/ui/slider';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const logSchema = z.object({
-  studyDuration: z.coerce.number().min(0).max(8, "Study duration cannot exceed 8 hours").optional(),
-  quranPagesRead: z.coerce.number().min(0, 'Must be a positive number').max(1000, "That's more pages than in the entire Qur'an!").optional(),
+  studyDuration: z.coerce.number().min(0).optional(),
+  quranPagesRead: z.coerce.number().min(0).optional(),
   expenses: z.coerce.number().min(0, 'Must be a positive number').max(1000000, "Please enter a reasonable expense amount.").optional(),
   abstained: z.boolean().default(false),
   notes: z.string().optional(),
 });
 
 type LogFormValues = z.infer<typeof logSchema>;
+
+const studyOptions = [
+    { value: 0.5, label: '30 min' },
+    { value: 1, label: '1 hour' },
+    { value: 1.5, label: '1.5 hours' },
+    { value: 2, label: '2 hours' },
+];
+
+const quranOptions = [
+    { value: 1, label: '1 Page' },
+    { value: 3, label: '3 Pages' },
+    { value: 5, label: '5 Pages' },
+    { value: 10, label: '10 Pages' },
+    { value: 15, label: '15 Pages' },
+    { value: 20, label: "One Juz'" }, // One Juz is ~20 pages
+];
 
 function DailyLogPage() {
   const { user } = useAuth();
@@ -195,8 +211,6 @@ function DailyLogPage() {
     }
   };
 
-  const studyDurationValue = form.watch('studyDuration');
-
   return (
     <div className="container mx-auto p-4 md:p-8">
       <header className="mb-8">
@@ -227,54 +241,69 @@ function DailyLogPage() {
                     ) : (
                         <Form {...form}>
                             <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-8">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <FormField
+                                <FormField
                                     control={form.control}
                                     name="studyDuration"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="flex items-center justify-between">
-                                                <span className='flex items-center gap-2'><Brain /> Study Duration</span>
-                                                <span className="text-sm font-normal text-muted-foreground">
-                                                  {field.value?.toFixed(2)} hours
-                                                </span>
-                                            </FormLabel>
+                                        <FormItem className="space-y-3">
+                                            <FormLabel className="flex items-center gap-2"><Brain /> Study Duration</FormLabel>
                                             <FormControl>
-                                                <Slider
-                                                    min={0}
-                                                    max={8}
-                                                    step={0.25}
-                                                    defaultValue={[field.value ?? 0]}
-                                                    onValueChange={(value) => field.onChange(value[0])}
-                                                />
+                                                <RadioGroup
+                                                onValueChange={field.onChange}
+                                                defaultValue={field.value?.toString()}
+                                                className="flex flex-wrap gap-4"
+                                                >
+                                                {studyOptions.map(option => (
+                                                    <FormItem key={option.value} className="flex items-center space-x-2 space-y-0">
+                                                        <FormControl>
+                                                            <RadioGroupItem value={option.value.toString()} />
+                                                        </FormControl>
+                                                        <FormLabel className="font-normal">{option.label}</FormLabel>
+                                                    </FormItem>
+                                                ))}
+                                                </RadioGroup>
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
-                                    />
-                                    <FormField
+                                />
+                                 <FormField
                                     control={form.control}
-                                    name="expenses"
+                                    name="quranPagesRead"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="flex items-center gap-2"><DollarSign /> Financial Expenses</FormLabel>
-                                            <FormControl><Input type="number" step="0.01" placeholder="0" {...field} /></FormControl>
+                                        <FormItem className="space-y-3">
+                                            <FormLabel className="flex items-center gap-2"><BookOpen /> Qur'an Read</FormLabel>
+                                            <FormControl>
+                                                <RadioGroup
+                                                onValueChange={field.onChange}
+                                                defaultValue={field.value?.toString()}
+                                                className="flex flex-wrap gap-x-6 gap-y-4"
+                                                >
+                                                {quranOptions.map(option => (
+                                                    <FormItem key={option.value} className="flex items-center space-x-2 space-y-0">
+                                                        <FormControl>
+                                                            <RadioGroupItem value={option.value.toString()} />
+                                                        </FormControl>
+                                                        <FormLabel className="font-normal">{option.label}</FormLabel>
+                                                    </FormItem>
+                                                ))}
+                                                </RadioGroup>
+                                            </FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
-                                    />
-                                </div>
+                                />
                                 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <FormField
                                         control={form.control}
-                                        name="quranPagesRead"
+                                        name="expenses"
                                         render={({ field }) => (
-                                          <FormItem>
-                                              <FormLabel className="flex items-center gap-2"><BookOpen /> Qur'an Pages Read</FormLabel>
-                                              <FormControl><Input type="number" step="1" placeholder="0" {...field} /></FormControl>
-                                              <FormMessage />
-                                          </FormItem>
+                                            <FormItem>
+                                                <FormLabel className="flex items-center gap-2"><DollarSign /> Financial Expenses</FormLabel>
+                                                <FormControl><Input type="number" step="0.01" placeholder="0" {...field} /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
                                         )}
                                     />
                                     <FormField
