@@ -1,17 +1,8 @@
-
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow users to read and write only their own documents in the 'users' collection.
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Rules for other collections will go here.
-    // For now, we are locking them down.
-    match /{document=**} {
-      allow read, write: if false;
     }
   }
 }
