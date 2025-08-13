@@ -86,7 +86,7 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-body antialiased;
+    @apply bg-background text-foreground antialiased;
 
     .theme-system & {
         background-image: url('https://www.transparenttextures.com/patterns/cracks.png'), linear-gradient(to right, hsl(228, 12%, 10%), hsl(228, 12%, 15%));
