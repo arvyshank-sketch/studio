@@ -29,7 +29,7 @@ import {
 import { auth } from '@/lib/firebase';
 import { useAuth } from '@/context/auth-context';
 import { useTheme } from '@/hooks/use-theme';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   collection,
   query,
@@ -56,6 +56,8 @@ import {
   Area,
 } from 'recharts';
 import { useRouter } from 'next/navigation';
+import { LevelUpModal } from '@/components/level-up-modal';
+
 
 function DashboardPage() {
   const { user } = useAuth();
@@ -67,6 +69,9 @@ function DashboardPage() {
   const [chartData, setChartData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [challengeProgress, setChallengeProgress] = useState<{week: number; day: number} | null>(null);
+  const [isLevelUpModalOpen, setIsLevelUpModalOpen] = useState(false);
+
+  const previousLevelRef = useRef<number | undefined>();
   
   const storageKey = user ? `${MEALS_STORAGE_KEY}-${user.uid}` : MEALS_STORAGE_KEY;
   const [allMeals] = useSyncedLocalStorage<MealEntry[]>(storageKey, []);
@@ -94,7 +99,15 @@ function DashboardPage() {
     const unsubscribe = onSnapshot(userDocRef, (doc) => {
         if (doc.exists()) {
             const userProfile = doc.data() as UserProfile;
+            
+            // Check for level up
+            if (previousLevelRef.current !== undefined && userProfile.level !== undefined && userProfile.level > previousLevelRef.current) {
+                setIsLevelUpModalOpen(true);
+            }
+            
             setProfile(userProfile);
+            previousLevelRef.current = userProfile.level;
+
 
             if (userProfile.createdAt) {
                 const totalDays = differenceInCalendarDays(new Date(), userProfile.createdAt.toDate()) + 1;
@@ -185,7 +198,7 @@ function DashboardPage() {
     };
 
     fetchDashboardStats();
-  }, [user, allMeals, profile]);
+  }, [user, allMeals]);
   
   const currentLevel = useMemo(() => profile ? getLevel(profile.xp ?? 0) : 1, [profile]);
   const xpForCurrentLevel = useMemo(() => getXpForLevel(currentLevel), [currentLevel]);
@@ -266,6 +279,8 @@ function DashboardPage() {
   );
 
   return (
+    <>
+    <LevelUpModal isOpen={isLevelUpModalOpen} onOpenChange={setIsLevelUpModalOpen} />
     <div className="flex flex-col gap-8 p-4 md:p-8">
       <header className="flex items-start justify-between gap-4">
         <div className="flex-1">
@@ -508,6 +523,7 @@ function DashboardPage() {
         </Card>
        )}
     </div>
+    </>
   );
 }
 

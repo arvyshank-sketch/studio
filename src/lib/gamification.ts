@@ -4,33 +4,31 @@ import { parseISO, differenceInCalendarDays } from 'date-fns';
 import { Book, Calendar, Flame, Target } from 'lucide-react';
 
 // --- XP & Leveling Configuration ---
-const BASE_XP_FOR_LEVEL_2 = 100; // XP needed to get from level 1 to 2
+const BASE_XP_FOR_LEVEL_UP = 100; // XP needed to get from level 1 to 2
 const LEVEL_GROWTH_FACTOR = 1.2; // Each level requires 20% more XP than the last
 
 export const XP_REWARDS = {
-  STUDY_PER_30_MIN: 10,
-  QURAN_PER_PAGE: 2,
+  STUDY_PER_30_MIN: 5,
+  QURAN_PER_PAGE: 1,
   EXPENSE_LOGGED: 5,
-  ABSTAINED: 25,
+  ABSTAINED: 20,
   CUSTOM_HABIT: 15,
   CALORIE_LOGGED: 10,
   WEIGHT_GAIN: 100,
 };
 
 /**
- * Calculates the total XP required to reach a given level.
+ * Calculates the total XP required to reach a given level, starting from level 0.
  * @param level The target level.
- * @returns The total XP required for that level.
+ * @returns The total cumulative XP required to reach that level.
  */
 export const getXpForLevel = (level: number): number => {
   if (level <= 1) return 0;
-  // Formula for geometric progression: a * r^(n-1)
-  // We calculate the sum of a geometric series to find total XP.
-  let totalXp = 0;
-  for (let i = 2; i <= level; i++) {
-    totalXp += Math.floor(BASE_XP_FOR_LEVEL_2 * Math.pow(LEVEL_GROWTH_FACTOR, i - 2));
+  let requiredXp = 0;
+  for (let i = 1; i < level; i++) {
+    requiredXp += Math.floor(BASE_XP_FOR_LEVEL_UP * Math.pow(LEVEL_GROWTH_FACTOR, i - 1));
   }
-  return totalXp;
+  return requiredXp;
 };
 
 
@@ -40,9 +38,8 @@ export const getXpForLevel = (level: number): number => {
  * @returns The user's current level.
  */
 export const getLevel = (xp: number): number => {
-  if (xp < BASE_XP_FOR_LEVEL_2) return 1;
   let level = 1;
-  while (getXpForLevel(level + 1) <= xp) {
+  while (xp >= getXpForLevel(level + 1)) {
     level++;
   }
   return level;
@@ -138,40 +135,53 @@ const badgeChecks: { [key: string]: (ctx: BadgeCheckContext) => boolean } = {
 // --- Main Gamification Processor ---
 
 /**
- * Processes gamification updates for a user based on a new daily log.
+ * Processes gamification updates for a user based on a new daily log or custom event.
  * @param userProfile The user's current profile.
  * @param allLogs All historical logs for the user.
  * @param newLog The new log being submitted.
+ * @param customXp A specific amount of XP to award (e.g., for weight gain).
  * @returns An updated user profile object.
  */
 export const processGamification = (userProfile: UserProfile, allLogs: DailyLog[], newLog: Partial<DailyLog>, customXp?: number): Partial<UserProfile> => {
   // --- 1. Calculate XP for the new log ---
   let earnedXp = customXp || 0;
 
-  // Proportional XP for studying
-  if (newLog.studyDuration && newLog.studyDuration > 0) {
-    earnedXp += (newLog.studyDuration / 0.5) * XP_REWARDS.STUDY_PER_30_MIN;
+  if (Object.keys(newLog).length > 0) {
+      // Proportional XP for studying
+      if (newLog.studyDuration && newLog.studyDuration > 0) {
+        earnedXp += (newLog.studyDuration / 0.5) * XP_REWARDS.STUDY_PER_30_MIN;
+      }
+      // Proportional XP for Quran reading
+      if (newLog.quranPagesRead && newLog.quranPagesRead > 0) {
+        earnedXp += newLog.quranPagesRead * XP_REWARDS.QURAN_PER_PAGE;
+      }
+
+      if (newLog.expenses && newLog.expenses > 0) earnedXp += XP_REWARDS.EXPENSE_LOGGED;
+      if (newLog.abstained) earnedXp += XP_REWARDS.ABSTAINED;
+      if (newLog.caloriesLogged) earnedXp += XP_REWARDS.CALORIE_LOGGED;
+
+      // Add XP for custom habits
+      if (newLog.customHabits) {
+        const completedHabits = Object.values(newLog.customHabits).filter(Boolean).length;
+        earnedXp += completedHabits * XP_REWARDS.CUSTOM_HABIT;
+      }
   }
-  // Proportional XP for Quran reading
-  if (newLog.quranPagesRead && newLog.quranPagesRead > 0) {
-    earnedXp += newLog.quranPagesRead * XP_REWARDS.QURAN_PER_PAGE;
+
+
+  let currentXp = userProfile.xp ?? 0;
+  let currentLevel = userProfile.level ?? 1;
+  let newXp = currentXp + earnedXp;
+
+  // --- 2. Check for Level Up ---
+  let xpForNextLevel = getXpForLevel(currentLevel + 1);
+  
+  while (newXp >= xpForNextLevel) {
+    currentLevel++;
+    // Surplus XP is handled by simply having the total XP
+    xpForNextLevel = getXpForLevel(currentLevel + 1);
   }
 
-  if (newLog.expenses && newLog.expenses > 0) earnedXp += XP_REWARDS.EXPENSE_LOGGED;
-  if (newLog.abstained) earnedXp += XP_REWARDS.ABSTAINED;
-  if (newLog.caloriesLogged) earnedXp += XP_REWARDS.CALORIE_LOGGED;
-
-  // Add XP for custom habits
-  if (newLog.customHabits) {
-    const completedHabits = Object.values(newLog.customHabits).filter(Boolean).length;
-    earnedXp += completedHabits * XP_REWARDS.CUSTOM_HABIT;
-  }
-
-  const currentXp = userProfile.xp ?? 0;
-  const newXp = currentXp + earnedXp;
-  const newLevel = getLevel(newXp);
-
-  // --- 2. Check for new badges ---
+  // --- 3. Check for new badges ---
   const currentBadges = new Set(userProfile.badges ?? []);
   if (newLog.date) {
     const badgeCheckContext: BadgeCheckContext = {
@@ -191,10 +201,10 @@ export const processGamification = (userProfile: UserProfile, allLogs: DailyLog[
   }
 
 
-  // --- 3. Return updated profile data ---
+  // --- 4. Return updated profile data ---
   const updatedProfile: Partial<UserProfile> = {
     xp: newXp,
-    level: newLevel,
+    level: currentLevel,
     badges: Array.from(currentBadges),
   };
 
