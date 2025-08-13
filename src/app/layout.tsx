@@ -4,6 +4,7 @@ import './globals.css';
 import { AppLayout } from '@/components/app-layout';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthContextProvider } from '@/context/auth-context';
+import { ThemeProvider } from '@/components/theme-provider';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -20,10 +21,17 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} h-full`} suppressHydrationWarning>
       <body className="h-full font-body antialiased bg-background">
-        <AuthContextProvider>
-          <AppLayout>{children}</AppLayout>
-          <Toaster />
-        </AuthContextProvider>
+        <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+        >
+          <AuthContextProvider>
+            <AppLayout>{children}</AppLayout>
+            <Toaster />
+          </AuthContextProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
