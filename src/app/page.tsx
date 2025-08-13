@@ -24,6 +24,7 @@ import {
   Utensils,
   IndianRupee,
   LogOut,
+  Calendar,
 } from 'lucide-react';
 import { auth } from '@/lib/firebase';
 import { useAuth } from '@/context/auth-context';
@@ -40,7 +41,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { DashboardStats, WeightEntry, UserProfile, DailyLog, MealEntry } from '@/lib/types';
-import { startOfWeek, endOfWeek, format, subDays, eachDayOfInterval, parseISO } from 'date-fns';
+import { startOfWeek, endOfWeek, format, subDays, eachDayOfInterval, parseISO, differenceInCalendarDays } from 'date-fns';
 import { getLevel, getXpForLevel, badges as definedBadges } from '@/lib/gamification';
 import { cn } from '@/lib/utils';
 import { useSyncedLocalStorage } from '@/hooks/use-synced-local-storage';
@@ -66,6 +67,7 @@ function DashboardPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [chartData, setChartData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [challengeProgress, setChallengeProgress] = useState<{week: number; day: number} | null>(null);
   
   const storageKey = user ? `${MEALS_STORAGE_KEY}-${user.uid}` : MEALS_STORAGE_KEY;
   const [allMeals] = useSyncedLocalStorage<MealEntry[]>(storageKey, []);
@@ -92,7 +94,15 @@ function DashboardPage() {
     const userDocRef = doc(db, 'users', user.uid);
     const unsubscribe = onSnapshot(userDocRef, (doc) => {
         if (doc.exists()) {
-            setProfile(doc.data() as UserProfile);
+            const userProfile = doc.data() as UserProfile;
+            setProfile(userProfile);
+
+            if (userProfile.createdAt) {
+                const totalDays = differenceInCalendarDays(new Date(), userProfile.createdAt.toDate()) + 1;
+                const week = Math.ceil(totalDays / 7);
+                const day = totalDays % 7 === 0 ? 7 : totalDays % 7;
+                setChallengeProgress({ week, day });
+            }
         }
     });
     return () => unsubscribe();
@@ -285,7 +295,7 @@ function DashboardPage() {
               size="icon"
               onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
             >
-              <Sun className="h-[1.2rem] w-[1.2rem] dark:hidden" />
+              <Sun className="h-[1.2rem] w-[1.2rem] block dark:hidden" />
               <Moon className="hidden h-[1.2rem] w-[1.2rem] dark:block" />
               <span className="sr-only">Toggle theme</span>
             </Button>
@@ -491,6 +501,25 @@ function DashboardPage() {
                 </CardContent>
             </Card>
        </div>
+       {challengeProgress && (
+        <Card>
+            <CardHeader>
+                <CardTitle className='flex items-center gap-2'><Calendar /> Challenge Progress</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className='flex items-center justify-around text-center'>
+                    <div>
+                        <p className='text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-400'>{challengeProgress.week}</p>
+                        <p className='text-muted-foreground'>Week</p>
+                    </div>
+                     <div>
+                        <p className='text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-400'>{challengeProgress.day}</p>
+                        <p className='text-muted-foreground'>Day</p>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+       )}
     </div>
   );
 }
