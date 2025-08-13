@@ -132,6 +132,7 @@ function HabitTrackerPage() {
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       if (snapshot.empty) {
+        // We need to ensure habitEntries is an array, even if empty
         setHabitEntries([]);
       } else {
         const entriesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as HabitEntry));
@@ -314,6 +315,70 @@ function HabitTrackerPage() {
     );
   };
 
+  const renderContent = () => {
+    if (isLoading) {
+       return (
+        <div className="space-y-4">
+            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
+        </div>
+      );
+    }
+    
+    if (habits.length === 0) {
+      return (
+         <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center">
+          <Target className="mx-auto mb-4 size-12 text-muted-foreground" />
+          <h3 className="text-lg font-semibold">No Habits Yet</h3>
+          <p className="text-sm text-muted-foreground">
+             Click 'New Habit' to start tracking your first habit.
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        {habits.map(habit => {
+          const IconComponent = Lucide[habit.icon as keyof typeof Lucide] as Lucide.LucideIcon;
+          const isChecked = todayEntry ? todayEntry.completedHabitIds.includes(habit.id) : false;
+          return (
+            <Card key={habit.id} className="transition-all hover:shadow-md">
+              <CardContent className="p-4 flex items-center gap-4">
+                <Checkbox 
+                  id={`habit-${habit.id}`}
+                  checked={isChecked}
+                  onCheckedChange={(checked) => handleToggleHabit(habit, !!checked)}
+                  className="size-6"
+                />
+                <div className="flex items-center gap-4 flex-1">
+                    <div className="bg-primary/10 p-3 rounded-lg">
+                       {IconComponent && <IconComponent className="size-6 text-primary" />}
+                    </div>
+                    <div className="flex-1">
+                        <label htmlFor={`habit-${habit.id}`} className="font-medium text-lg cursor-pointer">{habit.name}</label>
+                    </div>
+                </div>
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-1" title="Current Streak">
+                      <Flame className="size-5 text-orange-500"/>
+                      <span>{habit.currentStreak || 0}</span>
+                  </div>
+                   <div className="flex items-center gap-1" title="Longest Streak">
+                      <Zap className="size-5 text-yellow-500"/>
+                      <span>{habit.longestStreak || 0}</span>
+                  </div>
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => handleDeleteHabit(habit.id)}>
+                    <Trash2 className="size-4 text-destructive" />
+                </Button>
+              </CardContent>
+            </Card>
+          )
+        })}
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto p-4 md:p-8">
       <header className="mb-8 flex items-center justify-between">
@@ -371,59 +436,8 @@ function HabitTrackerPage() {
         </Dialog>
       </header>
       
-      {isLoading ? (
-        <div className="space-y-4">
-            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
-        </div>
-      ) : habits.length > 0 ? (
-        <div className="space-y-4">
-          {habits.map(habit => {
-            const IconComponent = Lucide[habit.icon as keyof typeof Lucide] as Lucide.LucideIcon;
-            const isChecked = todayEntry ? todayEntry.completedHabitIds.includes(habit.id) : false;
-            return (
-              <Card key={habit.id} className="transition-all hover:shadow-md">
-                <CardContent className="p-4 flex items-center gap-4">
-                  <Checkbox 
-                    id={`habit-${habit.id}`}
-                    checked={isChecked}
-                    onCheckedChange={(checked) => handleToggleHabit(habit, !!checked)}
-                    className="size-6"
-                  />
-                  <div className="flex items-center gap-4 flex-1">
-                      <div className="bg-primary/10 p-3 rounded-lg">
-                         {IconComponent && <IconComponent className="size-6 text-primary" />}
-                      </div>
-                      <div className="flex-1">
-                          <label htmlFor={`habit-${habit.id}`} className="font-medium text-lg cursor-pointer">{habit.name}</label>
-                      </div>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1" title="Current Streak">
-                        <Flame className="size-5 text-orange-500"/>
-                        <span>{habit.currentStreak || 0}</span>
-                    </div>
-                     <div className="flex items-center gap-1" title="Longest Streak">
-                        <Zap className="size-5 text-yellow-500"/>
-                        <span>{habit.longestStreak || 0}</span>
-                    </div>
-                  </div>
-                  <Button variant="ghost" size="icon" onClick={() => handleDeleteHabit(habit.id)}>
-                      <Trash2 className="size-4 text-destructive" />
-                  </Button>
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
-      ) : (
-         <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center">
-          <Target className="mx-auto mb-4 size-12 text-muted-foreground" />
-          <h3 className="text-lg font-semibold">No Habits Yet</h3>
-          <p className="text-sm text-muted-foreground">
-             Click 'New Habit' to start tracking your first habit.
-          </p>
-        </div>
-      )}
+      {renderContent()}
+
     </div>
   );
 }
