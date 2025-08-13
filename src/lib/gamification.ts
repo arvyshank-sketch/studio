@@ -4,17 +4,17 @@ import { parseISO, differenceInCalendarDays } from 'date-fns';
 import { Book, Calendar, Flame, Target } from 'lucide-react';
 
 // --- XP & Leveling Configuration ---
-const BASE_XP = 100;
-const GROWTH_FACTOR = 1.2;
+const BASE_XP_FOR_LEVEL_2 = 100; // XP needed to get from level 1 to 2
+const LEVEL_GROWTH_FACTOR = 1.2; // Each level requires 20% more XP than the last
 
 export const XP_REWARDS = {
-  STUDY_PER_30_MIN: 10,         // 10 XP per 30 minutes
-  QURAN_PER_PAGE: 2,           // 2 XP per page
+  STUDY_PER_30_MIN: 10,
+  QURAN_PER_PAGE: 2,
   EXPENSE_LOGGED: 5,
   ABSTAINED: 25,
   CUSTOM_HABIT: 15,
-  CALORIE_LOGGED: 10,          // XP for logging any meal for the day
-  WEIGHT_GAIN: 100,            // XP for any increase in weight
+  CALORIE_LOGGED: 10,
+  WEIGHT_GAIN: 100,
 };
 
 /**
@@ -24,9 +24,15 @@ export const XP_REWARDS = {
  */
 export const getXpForLevel = (level: number): number => {
   if (level <= 1) return 0;
-  // Each next level requires more XP, creating a steeper curve.
-  return Math.floor(BASE_XP * Math.pow(level - 1, GROWTH_FACTOR + (level * 0.01) ));
+  // Formula for geometric progression: a * r^(n-1)
+  // We calculate the sum of a geometric series to find total XP.
+  let totalXp = 0;
+  for (let i = 2; i <= level; i++) {
+    totalXp += Math.floor(BASE_XP_FOR_LEVEL_2 * Math.pow(LEVEL_GROWTH_FACTOR, i - 2));
+  }
+  return totalXp;
 };
+
 
 /**
  * Determines the user's current level based on their total XP.
@@ -34,7 +40,7 @@ export const getXpForLevel = (level: number): number => {
  * @returns The user's current level.
  */
 export const getLevel = (xp: number): number => {
-  if (xp < BASE_XP) return 1;
+  if (xp < BASE_XP_FOR_LEVEL_2) return 1;
   let level = 1;
   while (getXpForLevel(level + 1) <= xp) {
     level++;
@@ -139,9 +145,6 @@ const badgeChecks: { [key: string]: (ctx: BadgeCheckContext) => boolean } = {
  * @returns An updated user profile object.
  */
 export const processGamification = (userProfile: UserProfile, allLogs: DailyLog[], newLog: Partial<DailyLog>, customXp?: number): Partial<UserProfile> => {
-  // XP gain temporarily disabled
-  return {};
-
   // --- 1. Calculate XP for the new log ---
   let earnedXp = customXp || 0;
 
