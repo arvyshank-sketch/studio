@@ -166,6 +166,7 @@ interface ProcessGamificationArgs {
     userProfile: UserProfile;
     allLogs: DailyLog[];
     newLog: Partial<DailyLog>;
+    previousLog: DailyLog | null;
     userId: string;
     transaction: Transaction;
     customXp?: number;
@@ -182,6 +183,7 @@ export const processGamification = async ({
     userProfile, 
     allLogs, 
     newLog, 
+    previousLog,
     userId,
     transaction,
     customXp,
@@ -192,26 +194,49 @@ export const processGamification = async ({
   let penaltyXp = 0;
   let habitPenaltyXp = 0;
 
+  const prev = previousLog || {};
+
   // --- 1. Calculate XP for the new log ---
   if (customXp) {
     earnedXp += customXp;
   }
   
   if (Object.keys(newLog).length > 0) {
-      if (newLog.studyDuration && newLog.studyDuration > 0) {
-        earnedXp += (newLog.studyDuration / 0.5) * XP_REWARDS.STUDY_PER_30_MIN;
+      const studyDiff = (newLog.studyDuration ?? 0) - (prev.studyDuration ?? 0);
+      if (studyDiff > 0) {
+        earnedXp += (studyDiff / 0.5) * XP_REWARDS.STUDY_PER_30_MIN;
       }
-      if (newLog.quranPagesRead && newLog.quranPagesRead > 0) {
-        earnedXp += newLog.quranPagesRead * XP_REWARDS.QURAN_PER_PAGE;
+      
+      const quranDiff = (newLog.quranPagesRead ?? 0) - (prev.quranPagesRead ?? 0);
+      if (quranDiff > 0) {
+        earnedXp += quranDiff * XP_REWARDS.QURAN_PER_PAGE;
       }
-      if (newLog.expenses && newLog.expenses > 0) earnedXp += XP_REWARDS.EXPENSE_LOGGED;
-      if (newLog.abstained) earnedXp += XP_REWARDS.ABSTAINED;
-      if (newLog.caloriesLogged) earnedXp += XP_REWARDS.CALORIE_LOGGED;
-      if (newLog.customHabits) {
-        const completedHabits = Object.values(newLog.customHabits).filter(Boolean).length;
-        earnedXp += completedHabits * XP_REWARDS.CUSTOM_HABIT;
+      
+      // Award only if it wasn't logged before
+      if ((newLog.expenses ?? 0) > 0 && !(prev.expenses && prev.expenses > 0)) {
+          earnedXp += XP_REWARDS.EXPENSE_LOGGED;
+      }
 
-        // Calculate penalty for uncompleted habits
+      if (newLog.abstained && !prev.abstained) {
+          earnedXp += XP_REWARDS.ABSTAINED;
+      }
+
+      if (newLog.caloriesLogged && !prev.caloriesLogged) {
+          earnedXp += XP_REWARDS.CALORIE_LOGGED;
+      }
+
+      if (newLog.customHabits) {
+          const prevHabits = prev.customHabits || {};
+          Object.keys(newLog.customHabits).forEach(habitId => {
+              // Award XP only if the habit is newly completed
+              if (newLog.customHabits?.[habitId] && !prevHabits[habitId]) {
+                  earnedXp += XP_REWARDS.CUSTOM_HABIT;
+              }
+          });
+      }
+      
+      // Calculate penalty for uncompleted habits only when submitting the quest
+      if (habits.length > 0) {
         habits.forEach(habit => {
             if (!newLog.customHabits?.[habit.id]) {
                 habitPenaltyXp += XP_REWARDS.CUSTOM_HABIT_PENALTY;

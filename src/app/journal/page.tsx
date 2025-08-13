@@ -254,6 +254,11 @@ function DailyLogPage() {
     try {
       let penaltyToastDescription = '';
 
+      // Fetch the previous log state to calculate differential XP
+      const previousLogSnap = await getDoc(docRef);
+      const previousLog = previousLogSnap.exists() ? previousLogSnap.data() as DailyLog : null;
+
+
       await runTransaction(db, async (transaction) => {
         const userProfileSnap = await transaction.get(userDocRef);
         if (!userProfileSnap.exists()) {
@@ -269,6 +274,7 @@ function DailyLogPage() {
             userProfile: profile, 
             allLogs: allLogs, 
             newLog: logData,
+            previousLog: previousLog, // Pass the previous state
             userId: user.uid,
             transaction: transaction,
             checkForPenalties: true, // Enable penalty check
