@@ -9,7 +9,7 @@ import {
 } from 'react';
 import { onAuthStateChanged, type User, updateProfile } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 
 interface AuthContextType {
@@ -43,6 +43,11 @@ export const AuthContextProvider = ({ children }: { children: ReactNode }) => {
           // New user, create user document
           const newDisplayName = user.displayName || generateUsername(user.email!);
           
+          if (!user.displayName) {
+             // Update the user's profile in Firebase Auth as well
+            await updateProfile(user, { displayName: newDisplayName });
+          }
+          
           await setDoc(userDocRef, {
             email: user.email,
             displayName: newDisplayName,
@@ -50,11 +55,9 @@ export const AuthContextProvider = ({ children }: { children: ReactNode }) => {
             createdAt: new Date(),
           });
           
-          // Update the user's profile in Firebase Auth as well
-          await updateProfile(user, { displayName: newDisplayName });
-          // Reload user to get updated info
-          await user.reload(); 
-          setUser(auth.currentUser);
+          // Important: We need to get the latest user object after the profile update
+          const updatedUser = auth.currentUser;
+          setUser(updatedUser);
 
         } else {
            setUser(user);
@@ -79,8 +82,8 @@ export const AuthContextProvider = ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading }}>
-      {children}
+    <AuthContext.Provider value={{ user, loading: loading }}>
+      {!loading && children}
     </AuthContext.Provider>
   );
 };
