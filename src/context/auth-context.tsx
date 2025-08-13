@@ -40,8 +40,8 @@ export const AuthContextProvider = ({ children }: { children: ReactNode }) => {
 
       if (!userDocSnap.exists()) {
         const newDisplayName = user.displayName || generateUsername(user.email!);
-        // Using a placeholder with a hint for a default cool Sung Jin Woo avatar
-        const photoURL = user.photoURL || `https://placehold.co/128x128.png?text=SJW`;
+        // Using an empty string for photoURL to trigger fallback logic
+        const photoURL = user.photoURL || '';
         try {
           // We only update the profile if it's missing a display name or photo
           if (!user.displayName || !user.photoURL) {
@@ -105,5 +105,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    

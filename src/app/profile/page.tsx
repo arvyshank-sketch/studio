@@ -78,6 +78,7 @@ const jinwooAvatars = [
     { id: '8', src: 'https://placehold.co/128x128.png?text=SJW+Portrait', hint: 'sung jin woo portrait'},
 ];
 
+const DEFAULT_AVATAR_URL = 'https://placehold.co/128x128.png?text=SJW';
 
 const Commandment = ({ text, xp, isPenalty = false }: { text: string; xp: number; isPenalty?: boolean }) => (
     <li className="flex justify-between items-center">
@@ -137,16 +138,13 @@ function ProfilePage() {
     if (!user) return;
     setIsUpdatingAvatar(true);
 
-    const finalUrl = avatarUrl; // The src is already a valid placehold.co URL
+    const finalUrl = avatarUrl; 
 
     try {
-        // Update Firebase Auth profile
         await updateProfile(user, { photoURL: finalUrl });
-        // Update Firestore document
         const userDocRef = doc(db, 'users', user.uid);
         await updateDoc(userDocRef, { photoURL: finalUrl });
 
-        // Manually update local state to reflect change immediately
         setProfile(prev => prev ? { ...prev, photoURL: finalUrl } : null);
 
         toast({ title: "Avatar updated!", description: "Your new look is ready."});
@@ -196,9 +194,13 @@ function ProfilePage() {
                 <DialogTrigger asChild>
                     <button className="relative group">
                         <Avatar className="size-20 border-2 border-primary">
-                            <AvatarImage src={profile?.photoURL} alt={profile?.displayName} />
+                            <AvatarImage 
+                                src={profile?.photoURL || DEFAULT_AVATAR_URL} 
+                                alt={profile?.displayName || "User Avatar"} 
+                                onError={(e) => { e.currentTarget.src = DEFAULT_AVATAR_URL; }}
+                            />
                             <AvatarFallback className="text-2xl bg-muted">
-                                {profile?.displayName?.charAt(0).toUpperCase()}
+                                {profile?.displayName?.charAt(0).toUpperCase() || "?"}
                             </AvatarFallback>
                         </Avatar>
                         <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -242,11 +244,12 @@ function ProfilePage() {
                             onClick={() => handleAvatarSelect(avatar.src, avatar.hint)}
                         >
                             <Image
-                                src={avatar.src}
+                                src={avatar.src || DEFAULT_AVATAR_URL}
                                 alt={`Avatar ${avatar.hint}`}
                                 width={128}
                                 height={128}
                                 className="aspect-square object-cover"
+                                onError={(e) => { e.currentTarget.src = DEFAULT_AVATAR_URL; }}
                                 data-ai-hint={avatar.hint}
                             />
                         </button>
@@ -404,5 +407,3 @@ function ProfilePage() {
 }
 
 export default withAuth(ProfilePage);
-
-    
