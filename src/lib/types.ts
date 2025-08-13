@@ -63,6 +63,7 @@ export type DashboardStats = {
   weeklyWeightChange: number;
   weeklyJournalEntries: number;
   longestHabitStreak: number;
+  calories: number;
 };
 
 // Copied from src/ai/flows/analyze-physical-progress.ts to avoid circular dependency
@@ -80,5 +81,7 @@ export type AnalyzePhysicalProgressOutput = {
         diet: string;
     };
 };
+
+    
 
     

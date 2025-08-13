@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
   CardContent,
+  CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -18,6 +19,7 @@ import {
   Flame,
   Moon,
   Sun,
+  BarChart,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { useTheme } from '@/hooks/use-theme';
@@ -32,10 +34,24 @@ import {
   onSnapshot,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { DashboardStats, WeightEntry, UserProfile, DailyLog } from '@/lib/types';
-import { startOfWeek, endOfWeek, format } from 'date-fns';
+import type { DashboardStats, WeightEntry, UserProfile, DailyLog, MealEntry } from '@/lib/types';
+import { startOfWeek, endOfWeek, format, subDays, eachDayOfInterval, parseISO } from 'date-fns';
 import { getLevel, getXpForLevel, badges as definedBadges } from '@/lib/gamification';
 import { cn } from '@/lib/utils';
+import { useSyncedLocalStorage } from '@/hooks/use-synced-local-storage';
+import { MEALS_STORAGE_KEY } from '@/lib/constants';
+import {
+  ResponsiveContainer,
+  ComposedChart,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  CartesianGrid,
+  Bar,
+  Line,
+} from 'recharts';
+
 
 function DashboardPage() {
   const { user } = useAuth();
@@ -43,8 +59,13 @@ function DashboardPage() {
   const [greeting, setGreeting] = useState('');
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [chartData, setChartData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
+  const storageKey = user ? `${MEALS_STORAGE_KEY}-${user.uid}` : MEALS_STORAGE_KEY;
+  const [allMeals] = useSyncedLocalStorage<MealEntry[]>(storageKey, []);
+
+
   useEffect(() => {
     const getGreeting = () => {
       const hour = new Date().getHours();
@@ -75,15 +96,15 @@ function DashboardPage() {
       setIsLoading(true);
 
       const now = new Date();
-      const startOfThisWeek = startOfWeek(now, { weekStartsOn: 1 }); // Monday
-      const endOfThisWeek = endOfWeek(now, { weekStartsOn: 1 });
+      const endOfToday = new Date();
+      const startOfLast7Days = subDays(endOfToday, 6);
+
 
       // Fetch weight data for the week
       const weightRef = collection(db, 'users', user.uid, 'weightEntries');
       const weightQuery = query(
         weightRef,
-        where('date', '>=', startOfThisWeek),
-        where('date', '<=', endOfThisWeek),
+        where('date', '>=', startOfLast7Days),
         orderBy('date', 'asc')
       );
       const weightSnap = await getDocs(weightQuery);
@@ -102,31 +123,50 @@ function DashboardPage() {
       const journalRef = collection(db, 'users', user.uid, 'dailyLogs');
       const journalQuery = query(
         journalRef,
-        where('date', '>=', format(startOfThisWeek, 'yyyy-MM-dd')),
-        where('date', '<=', format(endOfThisWeek, 'yyyy-MM-dd'))
+        where('date', '>=', format(startOfLast7Days, 'yyyy-MM-dd')),
+        where('date', '<=', format(endOfToday, 'yyyy-MM-dd'))
       );
       const journalSnap = await getDocs(journalQuery);
-      const journalCount = journalSnap.size;
-      
+      const weeklyLogs = journalSnap.docs.map(doc => doc.data() as DailyLog);
+
       const allLogsQuery = query(journalRef, orderBy('date', 'desc'));
       const allLogsSnap = await getDocs(allLogsQuery);
-      const allLogs = allLogsSnap.docs.map(doc => doc.data() as DailyLog);
-
+      
       let longestStreak = 0;
       // ... streak calculation logic will go here in a future update ...
 
 
       setStats({
         weeklyWeightChange: weightChange,
-        weeklyJournalEntries: journalCount,
+        weeklyJournalEntries: weeklyLogs.length,
         longestHabitStreak: longestStreak,
+        calories: 0 // Will be calculated with meals data
+      });
+      
+      // Process data for the chart
+      const dateInterval = eachDayOfInterval({ start: startOfLast7Days, end: endOfToday });
+      
+      const processedChartData = dateInterval.map(date => {
+        const formattedDate = format(date, 'yyyy-MM-dd');
+        const logForDay = weeklyLogs.find(log => log.date === formattedDate);
+        const mealsForDay = allMeals.filter(meal => meal.date === formattedDate);
+        const totalCalories = mealsForDay.reduce((sum, meal) => sum + meal.calories, 0);
+
+        return {
+          date: format(date, 'MMM d'),
+          study: logForDay?.studyDuration || 0,
+          quran: logForDay?.quranPagesRead || 0,
+          expenses: logForDay?.expenses || 0,
+          calories: totalCalories,
+        };
       });
 
+      setChartData(processedChartData);
       setIsLoading(false);
     };
 
     fetchDashboardStats();
-  }, [user]);
+  }, [user, allMeals]);
   
   const currentLevel = useMemo(() => profile ? getLevel(profile.xp ?? 0) : 1, [profile]);
   const xpForCurrentLevel = useMemo(() => getXpForLevel(currentLevel), [currentLevel]);
@@ -193,6 +233,22 @@ function DashboardPage() {
       </CardContent>
     </Card>
   );
+  
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="p-4 bg-card border border-border rounded-lg shadow-lg">
+          <p className="label font-bold text-foreground">{`${label}`}</p>
+          {payload.map((pld: any, index: number) => (
+             <p key={index} style={{ color: pld.color }}>
+                {`${pld.name}: ${pld.value.toLocaleString()}${pld.unit || ''}`}
+             </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <div className="flex flex-col gap-8 p-4 md:p-8">
@@ -303,8 +359,48 @@ function DashboardPage() {
           isLoading={isLoading}
         />
       </div>
+
+       {/* Chart Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Weekly Summary</CardTitle>
+          <CardDescription>Your activity over the last 7 days.</CardDescription>
+        </CardHeader>
+        <CardContent className="h-[400px] w-full pr-4">
+          {isLoading ? (
+            <div className="flex h-full items-center justify-center">
+              <Loader2 className="size-8 animate-spin text-primary" />
+            </div>
+          ) : chartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" />
+                <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <YAxis yAxisId="left" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <YAxis yAxisId="right" orientation="right" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend wrapperStyle={{fontSize: "12px"}} />
+                <Bar yAxisId="left" dataKey="calories" name="Calories" fill="hsl(var(--primary))" barSize={20} unit=" kcal" />
+                <Bar yAxisId="left" dataKey="expenses" name="Expenses" fill="hsl(var(--accent))" barSize={20} unit=" $" />
+                <Line yAxisId="right" type="monotone" dataKey="study" name="Study" stroke="hsl(var(--chart-2))" strokeWidth={2} unit=" hrs" />
+                <Line yAxisId="right" type="monotone" dataKey="quran" name="Quran" stroke="hsl(var(--chart-4))" strokeWidth={2} unit=" pgs" />
+              </ComposedChart>
+            </ResponsiveContainer>
+          ) : (
+             <div className="flex h-full flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center">
+                <BarChart className="mx-auto mb-4 size-12 text-muted-foreground" />
+                <h3 className="text-lg font-semibold">No Data Yet</h3>
+                <p className="text-sm text-muted-foreground">
+                    Log your activities for a few days to see a chart of your progress.
+                </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
 
 export default withAuth(DashboardPage);
+
+    
