@@ -43,6 +43,11 @@ const links: NavLink[] = [
     icon: Weight,
   },
   {
+    href: '/rewards',
+    label: 'Rewards',
+    icon: Award,
+  },
+  {
     href: '/profile',
     label: 'Profile',
     icon: User,
@@ -57,7 +62,7 @@ export function BottomNav() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/80 backdrop-blur-sm">
-      <nav className="grid h-16 grid-cols-5 items-center justify-around">
+      <nav className="grid h-16 grid-cols-6 items-center justify-around">
         {links.map((link) => {
           const isActive = pathname === link.href;
           return (
@@ -71,7 +76,7 @@ export function BottomNav() {
                   : 'text-muted-foreground hover:text-primary'
               )}
             >
-              <link.icon className="size-7" />
+              <link.icon className="size-6" />
               <span className="text-xs font-medium sr-only sm:not-sr-only">{link.label}</span>
               {isActive && (
                 <div className="absolute bottom-0 h-1 w-8 rounded-t-full bg-gradient-to-r from-primary to-purple-400" />

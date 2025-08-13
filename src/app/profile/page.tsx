@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import withAuth from "@/components/with-auth";
 import { useAuth } from "@/context/auth-context";
-import { db } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
 import { getLevel, getXpForLevel, XP_REWARDS } from '@/lib/gamification';
@@ -15,13 +15,16 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { User, Shield, Info, CheckCircle, XCircle } from 'lucide-react';
+import { User, Shield, CheckCircle, XCircle, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { useRouter } from 'next/navigation';
 
 const Commandment = ({ text, xp, isPenalty = false }: { text: string; xp: number; isPenalty?: boolean }) => (
     <li className="flex justify-between items-center">
@@ -37,6 +40,7 @@ const Commandment = ({ text, xp, isPenalty = false }: { text: string; xp: number
 
 function ProfilePage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -52,6 +56,11 @@ function ProfilePage() {
     });
     return () => unsubscribe();
   }, [user]);
+
+  const handleSignOut = async () => {
+    await auth.signOut();
+    router.push('/login');
+  };
 
   const currentLevel = useMemo(() => profile ? getLevel(profile.xp ?? 0) : 1, [profile]);
   const xpForCurrentLevel = useMemo(() => getXpForLevel(currentLevel), [currentLevel]);
@@ -133,6 +142,12 @@ function ProfilePage() {
                 </dl>
               )}
             </CardContent>
+            <CardFooter>
+                <Button variant="outline" onClick={handleSignOut} className="w-full">
+                    <LogOut className="mr-2" />
+                    Sign Out
+                </Button>
+            </CardFooter>
           </Card>
         </TabsContent>
 

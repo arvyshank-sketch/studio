@@ -23,7 +23,6 @@ import {
   Book,
   Utensils,
   IndianRupee,
-  LogOut,
   Calendar,
   AlertTriangle,
 } from 'lucide-react';
@@ -85,11 +84,6 @@ function DashboardPage() {
   
   const storageKey = user ? `${MEALS_STORAGE_KEY}-${user.uid}` : MEALS_STORAGE_KEY;
   const [allMeals] = useSyncedLocalStorage<MealEntry[]>(storageKey, []);
-
-  const handleSignOut = async () => {
-    await auth.signOut();
-    router.push('/login');
-  };
 
   useEffect(() => {
     const getGreeting = () => {
@@ -456,15 +450,6 @@ function DashboardPage() {
               <Sun className="h-[1.2rem] w-[1.2rem] block dark:hidden" />
               <Moon className="hidden h-[1.2rem] w-[1.2rem] dark:block" />
               <span className="sr-only">Toggle theme</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleSignOut}
-              title="Sign Out"
-            >
-              <LogOut className="size-5" />
-              <span className="sr-only">Sign Out</span>
             </Button>
         </div>
       </header>
