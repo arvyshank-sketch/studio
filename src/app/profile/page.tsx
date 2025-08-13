@@ -68,14 +68,14 @@ const getRewardIcon = (type: string) => {
 }
 
 const jinwooAvatars = [
-    { id: '1', src: 'https://placehold.co/128x128/000000/FFFFFF.png', hint: 'sung jin woo cool'},
-    { id: '2', src: 'https://placehold.co/128x128/333333/FFFFFF.png', hint: 'sung jin woo monarch'},
-    { id: '3', src: 'https://placehold.co/128x128/666666/FFFFFF.png', hint: 'sung jin woo dagger'},
-    { id: '4', src: 'https://placehold.co/128x128/999999/FFFFFF.png', hint: 'sung jin woo glowing'},
-    { id: '5', src: 'https://placehold.co/128x128/CCCCCC/000000.png', hint: 'sung jin woo shadow'},
-    { id: '6', src: 'https://placehold.co/128x128/EEEEEE/000000.png', hint: 'sung jin woo smile'},
-    { id: '7', src: 'https://placehold.co/128x128/1a1a1a/FFFFFF.png', hint: 'sung jin woo fighting'},
-    { id: '8', src: 'https://placehold.co/128x128/4a4a4a/FFFFFF.png', hint: 'sung jin woo portrait'},
+    { id: '1', src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', hint: 'sung jin woo cool'},
+    { id: '2', src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', hint: 'sung jin woo monarch'},
+    { id: '3', src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', hint: 'sung jin woo dagger'},
+    { id: '4', src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', hint: 'sung jin woo glowing'},
+    { id: '5', src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', hint: 'sung jin woo shadow'},
+    { id: '6', src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', hint: 'sung jin woo smile'},
+    { id: '7', src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', hint: 'sung jin woo fighting'},
+    { id: '8', src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', hint: 'sung jin woo portrait'},
 ];
 
 
