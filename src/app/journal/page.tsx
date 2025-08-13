@@ -419,10 +419,19 @@ function DailyLogPage() {
                                     <FormField
                                         control={form.control}
                                         name="expenses"
-                                        render={({ field }) => (
+                                        render={({ field: { onChange, ...restField } }) => (
                                             <FormItem>
                                                 <FormLabel className="flex items-center gap-2"><DollarSign /> Financial Expenses</FormLabel>
-                                                <FormControl><Input type="number" step="0.01" placeholder="0" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
+                                                <FormControl>
+                                                    <Input 
+                                                        type="number" 
+                                                        step="0.01" 
+                                                        placeholder="0" 
+                                                        {...restField}
+                                                        onChange={e => onChange(e.target.valueAsNumber || undefined)}
+                                                        value={restField.value ?? ''}
+                                                    />
+                                                </FormControl>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
@@ -533,3 +542,5 @@ function DailyLogPage() {
 }
 
 export default withAuth(DailyLogPage);
+
+    
