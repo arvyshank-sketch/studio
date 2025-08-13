@@ -10,7 +10,7 @@ export function WelcomeModal() {
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    // This will run every time the component is mounted (i.e., on every page load/app open)
+    // This will run once per session
     const hasBeenShown = sessionStorage.getItem('welcomeModalShown');
     
     if (!hasBeenShown) {
@@ -21,7 +21,7 @@ export function WelcomeModal() {
     // Auto-close after a delay
     const timer = setTimeout(() => {
       handleClose();
-    }, 3500);
+    }, 2500); // Reduced from 3.5s to 2.5s
 
     return () => clearTimeout(timer);
   }, []);

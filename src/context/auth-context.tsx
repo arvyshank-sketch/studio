@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -33,54 +34,47 @@ export const AuthContextProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        // User is signed in.
-        const userDocRef = doc(db, 'users', currentUser.uid);
-        const userDocSnap = await getDoc(userDocRef);
+    const handleUser = async (user: User) => {
+      // Check for and create user document in Firestore in the background
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDocSnap = await getDoc(userDocRef);
 
-        if (!userDocSnap.exists()) {
-          // New user, create user document in Firestore
-          const newDisplayName = currentUser.displayName || generateUsername(currentUser.email!);
-          
-          try {
-            // Update the user's profile in Firebase Auth first
-            if (!currentUser.displayName) {
-              await updateProfile(currentUser, { displayName: newDisplayName });
-            }
-            
-            // Then create the document in Firestore
-            await setDoc(userDocRef, {
-              uid: currentUser.uid,
-              email: currentUser.email,
-              displayName: newDisplayName,
-              photoURL: currentUser.photoURL,
-              createdAt: serverTimestamp(),
-            });
-            
-            // Reload the user to get the updated profile information
-            await currentUser.reload();
-            setUser(auth.currentUser);
-
-          } catch (error) {
-             console.error("Error creating new user entry:", error);
-             setUser(currentUser); // Set user even if profile update fails
+      if (!userDocSnap.exists()) {
+        const newDisplayName = user.displayName || generateUsername(user.email!);
+        try {
+          if (!user.displayName) {
+            await updateProfile(user, { displayName: newDisplayName });
           }
-
-        } else {
-           setUser(currentUser);
+          await setDoc(userDocRef, {
+            uid: user.uid,
+            email: user.email,
+            displayName: newDisplayName,
+            photoURL: user.photoURL,
+            createdAt: serverTimestamp(),
+            level: 1,
+            xp: 0,
+            badges: [],
+          });
+          await user.reload();
+          setUser(auth.currentUser); // Update state with reloaded user
+        } catch (error) {
+          console.error("Error creating new user entry:", error);
         }
-
-      } else {
-        // User is signed out
-        setUser(null);
       }
+    };
+    
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
       setLoading(false);
+      if (currentUser) {
+        handleUser(currentUser);
+      }
     });
 
     return () => unsubscribe();
   }, []);
 
+  // Initial loader remains for the very first check
   if (loading) {
     return (
       <div className="flex h-screen w-screen items-center justify-center">
