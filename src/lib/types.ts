@@ -82,3 +82,18 @@ export type DashboardStats = {
   longestHabitStreak: number;
   calories: number;
 };
+
+export type QuestExercise = {
+    name: string;
+    goal: number;
+    completed: boolean;
+};
+
+export type UnexpectedQuest = {
+    id: string;
+    title: string;
+    description: string;
+    exercises: QuestExercise[];
+    isCompleted: boolean;
+    generatedAt: Timestamp | any;
+}

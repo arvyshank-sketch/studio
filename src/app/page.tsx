@@ -25,9 +25,9 @@ import {
   IndianRupee,
   LogOut,
   Calendar,
-  PlusCircle,
+  AlertTriangle,
 } from 'lucide-react';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { useAuth } from '@/context/auth-context';
 import { useTheme } from '@/hooks/use-theme';
 import { useState, useEffect, useMemo, useRef } from 'react';
@@ -39,11 +39,13 @@ import {
   orderBy,
   doc,
   onSnapshot,
+  setDoc,
+  serverTimestamp,
+  runTransaction
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import type { DashboardStats, WeightEntry, UserProfile, DailyLog, MealEntry } from '@/lib/types';
-import { startOfWeek, endOfWeek, format, subDays, eachDayOfInterval, parseISO, differenceInCalendarDays } from 'date-fns';
-import { getLevel, getXpForLevel, badges as definedBadges } from '@/lib/gamification';
+import { eachDayOfInterval, format, subDays, differenceInCalendarDays } from 'date-fns';
+import type { DashboardStats, WeightEntry, UserProfile, DailyLog, MealEntry, UnexpectedQuest, QuestExercise } from '@/lib/types';
+import { getLevel, getXpForLevel, badges as definedBadges, XP_REWARDS } from '@/lib/gamification';
 import { cn } from '@/lib/utils';
 import { useSyncedLocalStorage } from '@/hooks/use-synced-local-storage';
 import { MEALS_STORAGE_KEY } from '@/lib/constants';
@@ -58,12 +60,18 @@ import {
 } from 'recharts';
 import { useRouter } from 'next/navigation';
 import { LevelUpModal } from '@/components/level-up-modal';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useToast } from '@/hooks/use-toast';
 
+
+const QUEST_GENERATION_CHANCE = 0.25; // 25% chance to get a quest each day
 
 function DashboardPage() {
   const { user } = useAuth();
   const { theme, setTheme } = useTheme();
+  const { toast } = useToast();
   const router = useRouter();
+
   const [greeting, setGreeting] = useState('');
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -71,6 +79,8 @@ function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [challengeProgress, setChallengeProgress] = useState<{week: number; day: number} | null>(null);
   const [isLevelUpModalOpen, setIsLevelUpModalOpen] = useState(false);
+  const [unexpectedQuest, setUnexpectedQuest] = useState<UnexpectedQuest | null>(null);
+  const [isQuestLoading, setIsQuestLoading] = useState(true);
 
   const previousLevelRef = useRef<number | undefined>();
   
@@ -81,7 +91,6 @@ function DashboardPage() {
     await auth.signOut();
     router.push('/login');
   };
-
 
   useEffect(() => {
     const getGreeting = () => {
@@ -101,14 +110,12 @@ function DashboardPage() {
         if (doc.exists()) {
             const userProfile = doc.data() as UserProfile;
             
-            // Check for level up
             if (previousLevelRef.current !== undefined && userProfile.level !== undefined && userProfile.level > previousLevelRef.current) {
                 setIsLevelUpModalOpen(true);
             }
             
             setProfile(userProfile);
             previousLevelRef.current = userProfile.level;
-
 
             if (userProfile.createdAt) {
                 const totalDays = differenceInCalendarDays(new Date(), userProfile.createdAt.toDate()) + 1;
@@ -121,6 +128,51 @@ function DashboardPage() {
     return () => unsubscribe();
   }, [user]);
 
+  // Unexpected Quest generation and listener
+  useEffect(() => {
+      if (!user) return;
+      const todayStr = format(new Date(), 'yyyy-MM-dd');
+      const questDocRef = doc(db, 'users', user.uid, 'unexpectedQuests', todayStr);
+
+      const generateQuest = async () => {
+          const docSnap = await getDoc(questDocRef);
+          if (!docSnap.exists()) {
+              // No quest for today, try to generate one
+              if (Math.random() < QUEST_GENERATION_CHANCE) {
+                  const newQuest: UnexpectedQuest = {
+                      id: todayStr,
+                      title: 'Unexpected Quest',
+                      description: 'A sudden mission has appeared. Complete it by the end of the day or face a penalty.',
+                      exercises: [
+                          { name: 'Push-ups', goal: 100, completed: false },
+                          { name: 'Sit-ups', goal: 100, completed: false },
+                          { name: 'Squats', goal: 100, completed: false },
+                          { name: 'Running', goal: 10, completed: false } // in km
+                      ],
+                      isCompleted: false,
+                      generatedAt: serverTimestamp(),
+                  };
+                  await setDoc(questDocRef, newQuest);
+              }
+          }
+      };
+      
+      generateQuest();
+
+      const unsubscribe = onSnapshot(questDocRef, (doc) => {
+          if (doc.exists()) {
+              setUnexpectedQuest(doc.data() as UnexpectedQuest);
+          } else {
+              setUnexpectedQuest(null);
+          }
+          setIsQuestLoading(false);
+      });
+      
+      return () => unsubscribe();
+
+  }, [user]);
+
+
   // Fetch dashboard stats
   useEffect(() => {
     if (!user) return;
@@ -132,8 +184,6 @@ function DashboardPage() {
       const endOfToday = new Date();
       const startOfLast7Days = subDays(endOfToday, 6);
 
-
-      // Fetch weight data for the week
       const weightRef = collection(db, 'users', user.uid, 'weightEntries');
       const weightQuery = query(
         weightRef,
@@ -152,7 +202,6 @@ function DashboardPage() {
         weightChange = lastWeight - firstWeight;
       }
 
-      // Fetch journal entries for the week
       const journalRef = collection(db, 'users', user.uid, 'dailyLogs');
       const journalQuery = query(
         journalRef,
@@ -166,8 +215,6 @@ function DashboardPage() {
       const allLogsSnap = await getDocs(allLogsQuery);
       
       let longestStreak = 0;
-      // ... streak calculation logic will go here in a future update ...
-
 
       setStats({
         weeklyWeightChange: weightChange,
@@ -176,7 +223,6 @@ function DashboardPage() {
         calories: 0 // Will be calculated with meals data
       });
       
-      // Process data for the chart
       const dateInterval = eachDayOfInterval({ start: startOfLast7Days, end: endOfToday });
       
       const processedChartData = dateInterval.map(date => {
@@ -220,6 +266,55 @@ function DashboardPage() {
     const nameWithoutNumbers = name.replace(/[0-9]/g, '');
     return nameWithoutNumbers.charAt(0).toUpperCase() + nameWithoutNumbers.slice(1);
   }, [user]);
+
+  const handleQuestExerciseToggle = (exerciseName: string, checked: boolean) => {
+    if (!unexpectedQuest) return;
+    const updatedExercises = unexpectedQuest.exercises.map(ex => 
+        ex.name === exerciseName ? { ...ex, completed: checked } : ex
+    );
+    setUnexpectedQuest({ ...unexpectedQuest, exercises: updatedExercises });
+  };
+
+  const handleCompleteQuest = async () => {
+    if (!user || !unexpectedQuest) return;
+    
+    const allCompleted = unexpectedQuest.exercises.every(ex => ex.completed);
+    if (!allCompleted) {
+        toast({
+            variant: 'destructive',
+            title: 'Incomplete Quest',
+            description: 'You must complete all exercises to finish the quest.'
+        });
+        return;
+    }
+    
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const questDocRef = doc(db, 'users', user.uid, 'unexpectedQuests', todayStr);
+    const userDocRef = doc(db, 'users', user.uid);
+
+    try {
+        await runTransaction(db, async (transaction) => {
+            const userProfileSnap = await transaction.get(userDocRef);
+            if (!userProfileSnap.exists()) throw new Error("User profile not found!");
+            
+            const currentProfile = userProfileSnap.data() as UserProfile;
+            const newXp = (currentProfile.xp || 0) + XP_REWARDS.UNEXPECTED_QUEST;
+            const newLevel = getLevel(newXp);
+            
+            transaction.update(userDocRef, { xp: newXp, level: newLevel });
+            transaction.update(questDocRef, { isCompleted: true });
+        });
+        
+        toast({
+            title: `+${XP_REWARDS.UNEXPECTED_QUEST} XP!`,
+            description: "You have successfully completed the Unexpected Quest!",
+        });
+
+    } catch (e) {
+        console.error("Failed to complete unexpected quest:", e);
+        toast({ variant: 'destructive', title: "Error", description: "Couldn't save quest completion." });
+    }
+  };
 
 
   const StatCard = ({
@@ -313,6 +408,43 @@ function DashboardPage() {
             </Button>
         </div>
       </header>
+
+      {/* Unexpected Quest Section */}
+      {!isQuestLoading && unexpectedQuest && (
+        <Card className="border-accent ring-2 ring-accent/50">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-accent"><AlertTriangle/> {unexpectedQuest.title}</CardTitle>
+                <CardDescription>{unexpectedQuest.description}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div className="space-y-3">
+                    {unexpectedQuest.exercises.map(ex => (
+                        <div key={ex.name} className="flex items-center space-x-3">
+                           <Checkbox 
+                                id={`ex-${ex.name}`} 
+                                checked={ex.completed}
+                                onCheckedChange={(checked) => handleQuestExerciseToggle(ex.name, checked as boolean)}
+                                disabled={unexpectedQuest.isCompleted}
+                            />
+                           <label
+                                htmlFor={`ex-${ex.name}`}
+                                className={cn("text-sm font-medium leading-none", unexpectedQuest.isCompleted || ex.completed ? 'line-through text-muted-foreground' : '')}
+                            >
+                                {ex.goal} {ex.name}{ex.name !== 'Running' && 's'} {ex.name === 'Running' && 'km'}
+                            </label>
+                        </div>
+                    ))}
+                </div>
+                {!unexpectedQuest.isCompleted ? (
+                    <Button onClick={handleCompleteQuest} className="w-full">
+                        Complete Quest
+                    </Button>
+                ) : (
+                    <p className="text-center text-green-500 font-bold">Quest Completed!</p>
+                )}
+            </CardContent>
+        </Card>
+      )}
 
       {/* Gamification Section */}
        <Card>

@@ -254,14 +254,19 @@ function DailyLogPage() {
           throw new Error("User profile not found!");
         }
         const profile = userProfileSnap.data() as UserProfile;
-        const previousLevel = profile.level ?? 1;
-
+        
         // Note: The gamification logic needs *all* logs for some badge checks.
         const allLogsQuery = query(logsCollectionRef!, orderBy('date', 'desc'));
         const allLogsSnap = await getDocs(allLogsQuery);
         const allLogs = allLogsSnap.docs.map(doc => doc.data() as DailyLog);
 
-        const gamificationResult = processGamification(profile, allLogs, logData);
+        const gamificationResult = await processGamification({
+            userProfile: profile, 
+            allLogs: allLogs, 
+            newLog: logData,
+            userId: user.uid,
+            transaction: transaction
+        });
         transaction.set(docRef, logData, { merge: true });
         transaction.update(userDocRef, gamificationResult.updatedProfile);
         

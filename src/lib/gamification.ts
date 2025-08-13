@@ -1,7 +1,9 @@
 
-import type { UserProfile, DailyLog, Badge } from './types';
-import { parseISO, differenceInCalendarDays } from 'date-fns';
+import type { UserProfile, DailyLog, Badge, UnexpectedQuest } from './types';
+import { parseISO, differenceInCalendarDays, format, subDays } from 'date-fns';
 import { Book, Calendar, Flame, Target } from 'lucide-react';
+import { collection, query, where, getDocs, doc, Transaction, getDoc } from 'firebase/firestore';
+import { db } from './firebase';
 
 // --- XP & Leveling Configuration ---
 const BASE_XP_FOR_LEVEL_UP = 100; // XP needed to get from level 1 to 2
@@ -15,6 +17,8 @@ export const XP_REWARDS = {
   CUSTOM_HABIT: 15,
   CALORIE_LOGGED: 10,
   WEIGHT_GAIN: 100,
+  UNEXPECTED_QUEST: 150,
+  UNEXPECTED_QUEST_PENALTY: -50,
 };
 
 /**
@@ -134,36 +138,58 @@ const badgeChecks: { [key: string]: (ctx: BadgeCheckContext) => boolean } = {
 
 // --- Main Gamification Processor ---
 
+interface ProcessGamificationArgs {
+    userProfile: UserProfile;
+    allLogs: DailyLog[];
+    newLog: Partial<DailyLog>;
+    userId: string;
+    transaction: Transaction;
+    customXp?: number;
+}
+
+
 /**
  * Processes gamification updates for a user based on a new daily log or custom event.
- * @param userProfile The user's current profile.
- * @param allLogs All historical logs for the user.
- * @param newLog The new log being submitted.
- * @param customXp A specific amount of XP to award (e.g., for weight gain).
  * @returns An updated user profile object and a flag indicating if a level-up occurred.
  */
-export const processGamification = (userProfile: UserProfile, allLogs: DailyLog[], newLog: Partial<DailyLog>, customXp?: number) => {
+export const processGamification = async ({
+    userProfile, 
+    allLogs, 
+    newLog, 
+    userId,
+    transaction,
+    customXp
+}: ProcessGamificationArgs) => {
   // --- 1. Calculate XP for the new log ---
   let earnedXp = customXp || 0;
 
   if (Object.keys(newLog).length > 0) {
-      // Proportional XP for studying
       if (newLog.studyDuration && newLog.studyDuration > 0) {
         earnedXp += (newLog.studyDuration / 0.5) * XP_REWARDS.STUDY_PER_30_MIN;
       }
-      // Proportional XP for Quran reading
       if (newLog.quranPagesRead && newLog.quranPagesRead > 0) {
         earnedXp += newLog.quranPagesRead * XP_REWARDS.QURAN_PER_PAGE;
       }
-
       if (newLog.expenses && newLog.expenses > 0) earnedXp += XP_REWARDS.EXPENSE_LOGGED;
       if (newLog.abstained) earnedXp += XP_REWARDS.ABSTAINED;
       if (newLog.caloriesLogged) earnedXp += XP_REWARDS.CALORIE_LOGGED;
-
-      // Add XP for custom habits
       if (newLog.customHabits) {
         const completedHabits = Object.values(newLog.customHabits).filter(Boolean).length;
         earnedXp += completedHabits * XP_REWARDS.CUSTOM_HABIT;
+      }
+  }
+
+  // --- 2. Check for Unexpected Quest Penalty ---
+  const yesterdayStr = format(subDays(new Date(), 1), 'yyyy-MM-dd');
+  const penaltyQuestRef = doc(db, 'users', userId, 'unexpectedQuests', yesterdayStr);
+  const penaltyQuestSnap = await transaction.get(penaltyQuestRef);
+  
+  if (penaltyQuestSnap.exists()) {
+      const quest = penaltyQuestSnap.data() as UnexpectedQuest;
+      if (!quest.isCompleted) {
+          earnedXp += XP_REWARDS.UNEXPECTED_QUEST_PENALTY;
+          // Mark as completed to avoid double penalty
+          transaction.update(penaltyQuestRef, { isCompleted: true });
       }
   }
 
@@ -172,7 +198,7 @@ export const processGamification = (userProfile: UserProfile, allLogs: DailyLog[
   let currentLevel = userProfile.level ?? 1;
   let newXp = currentXp + earnedXp;
 
-  // --- 2. Check for Level Up ---
+  // --- 3. Check for Level Up ---
   let leveledUp = false;
   let xpForNextLevel = getXpForLevel(currentLevel + 1);
   
@@ -182,7 +208,7 @@ export const processGamification = (userProfile: UserProfile, allLogs: DailyLog[
     xpForNextLevel = getXpForLevel(currentLevel + 1);
   }
 
-  // --- 3. Check for new badges ---
+  // --- 4. Check for new badges ---
   const currentBadges = new Set(userProfile.badges ?? []);
   if (newLog.date) {
     const badgeCheckContext: BadgeCheckContext = {
@@ -202,7 +228,7 @@ export const processGamification = (userProfile: UserProfile, allLogs: DailyLog[
   }
 
 
-  // --- 4. Return updated profile data ---
+  // --- 5. Return updated profile data ---
   const updatedProfile: Partial<UserProfile> = {
     xp: newXp,
     level: currentLevel,

@@ -162,7 +162,7 @@ function WeightPage() {
 
 
   const handleWeightSubmit: SubmitHandler<WeightFormValues> = async (data) => {
-    if (!weightCollectionRef || !userDocRef) return;
+    if (!weightCollectionRef || !userDocRef || !user) return;
     setIsSubmitting(true);
     
     const today = new Date();
@@ -196,7 +196,14 @@ function WeightPage() {
                     throw new Error("User profile not found!");
                 }
                 const currentProfile = userProfileSnap.data() as UserProfile;
-                const updatedProfile = processGamification(currentProfile, [], {}, XP_REWARDS.WEIGHT_GAIN);
+                const { updatedProfile } = await processGamification({
+                    userProfile: currentProfile,
+                    allLogs: [],
+                    newLog: {},
+                    userId: user.uid,
+                    transaction: transaction,
+                    customXp: XP_REWARDS.WEIGHT_GAIN,
+                });
                 transaction.update(userDocRef, updatedProfile);
              });
              toast({
