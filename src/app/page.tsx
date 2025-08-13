@@ -310,7 +310,7 @@ function DashboardPage() {
           {isLoading || !profile ? (
             <div className="space-y-3">
               <Skeleton className="h-6 w-1/4 bg-muted/20" />
-              <Skeleton className="h-4 w-full bg-muted/20" />
+              <Skeleton className="h-4 w-full bg-muted" />
             </div>
           ) : (
             <div>

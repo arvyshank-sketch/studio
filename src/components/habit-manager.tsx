@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -93,9 +92,16 @@ export function HabitManager({ isOpen, setIsOpen, profile }: HabitManagerProps) 
         return;
     }
     
+    // Find the specific habit object in the profile's habits array to ensure the correct one is removed
+    const habitToRemove = profile?.habits?.find(h => h.id === habitToDelete.id);
+    if (!habitToRemove) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Habit not found in profile.' });
+      return;
+    }
+
     try {
       await updateDoc(userDocRef, {
-        habits: arrayRemove(habitToDelete),
+        habits: arrayRemove(habitToRemove),
       });
       toast({ title: 'Success', description: 'Habit removed.' });
     } catch (error) {
@@ -113,39 +119,41 @@ export function HabitManager({ isOpen, setIsOpen, profile }: HabitManagerProps) 
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Manage Habits</DialogTitle>
-          <DialogDescription>Add new habits or remove existing ones.</DialogDescription>
+          <DialogDescription>Add new habits or remove existing ones from your daily log.</DialogDescription>
         </DialogHeader>
-        <div className="py-4">
-          <h3 className="mb-4 text-lg font-medium">Add New Habit</h3>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-start gap-2">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem className="flex-grow">
-                    <FormLabel className="sr-only">Habit Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Meditate for 10 minutes" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" disabled={isSubmitting || !userDocRef}>
-                {isSubmitting ? <Loader2 className="animate-spin" /> : 'Add'}
-              </Button>
-            </form>
-          </Form>
+        <div className="py-4 space-y-8">
+          <div>
+            <h3 className="mb-4 text-lg font-medium">Add New Habit</h3>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-start gap-2">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem className="flex-grow">
+                      <FormLabel className="sr-only">Habit Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., Meditate for 10 minutes" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" disabled={isSubmitting || !userDocRef}>
+                  {isSubmitting ? <Loader2 className="animate-spin" /> : 'Add'}
+                </Button>
+              </form>
+            </Form>
+          </div>
 
-          <div className="mt-8">
+          <div>
             <h3 className="mb-4 text-lg font-medium">Existing Habits</h3>
             <ScrollArea className="h-[200px] pr-4">
                 {profile?.habits && profile.habits.length > 0 ? (
                 <div className="space-y-2">
                     {profile.habits.map((habit) => (
                     <div key={habit.id} className="flex items-center justify-between rounded-md border p-3">
-                        <span className="text-sm">{habit.name}</span>
+                        <span className="text-sm truncate pr-2">{habit.name}</span>
                         <Button variant="ghost" size="icon" onClick={() => deleteHabit(habit)} disabled={!userDocRef}>
                             <Trash2 className="size-4 text-destructive" />
                             <span className="sr-only">Delete habit</span>
