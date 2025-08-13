@@ -4,10 +4,13 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useForm, type SubmitHandler, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { format, subDays, addDays, eachDayOfInterval, isSameDay } from 'date-fns';
+import { format, isSameDay } from 'date-fns';
 import {
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,10 +33,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Flame, Sparkles, Loader2, HeartHandshake } from 'lucide-react';
+import { Flame } from 'lucide-react';
 import { JOURNAL_STORAGE_KEY } from '@/lib/constants';
-import { useSyncedLocalStorage } from '@/hooks/use-synced-local-storage';
-import { generateMotivation } from '@/ai/flows/generate-motivation-flow';
 
 const journalSchema = z.object({
   studyHours: z.coerce.number().min(0),
@@ -44,87 +45,12 @@ const journalSchema = z.object({
 
 type JournalFormValues = z.infer<typeof journalSchema>;
 
-const DateSelector = ({ selectedDate, setSelectedDate }: { selectedDate: Date, setSelectedDate: (date: Date) => void }) => {
-  const dates = useMemo(() => {
-    const start = subDays(new Date(), 3);
-    const end = addDays(new Date(), 3);
-    return eachDayOfInterval({ start, end });
-  }, []);
-
-  return (
-    <div className="flex justify-center space-x-2 rounded-full bg-primary/10 p-2 mb-8">
-      {dates.map((date) => (
-        <Button
-          key={date.toString()}
-          variant={isSameDay(date, selectedDate) ? 'default' : 'ghost'}
-          onClick={() => setSelectedDate(date)}
-          className="flex flex-col h-auto rounded-full px-4 py-2"
-        >
-          <span className="text-xs">{format(date, 'EEE')}</span>
-          <span className="font-bold text-lg">{format(date, 'd')}</span>
-        </Button>
-      ))}
-    </div>
-  );
-};
-
-const MotivationCard = () => {
-    const [motivation, setMotivation] = useState<{title: string, quote: string} | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchMotivation = async () => {
-            setIsLoading(true);
-            try {
-                const result = await generateMotivation();
-                setMotivation(result);
-            } catch (error) {
-                console.error("Failed to fetch motivation:", error);
-                setMotivation({title: "Keep Going", quote: "Believe in yourself and all that you are. Know that there is something inside you that is greater than any obstacle."});
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchMotivation();
-    }, []);
-
-    return (
-        <Card className="bg-gradient-to-r from-primary to-purple-600 text-white shadow-xl">
-            <CardContent className="p-6 flex items-center justify-between">
-                {isLoading ? (
-                    <div className="w-full flex items-center justify-center gap-2">
-                        <Loader2 className="size-6 animate-spin" />
-                        <span className="text-lg">Generating inspiration...</span>
-                    </div>
-                ) : (
-                    <>
-                        <div>
-                            <h2 className="text-2xl font-bold">{motivation?.title}</h2>
-                            <p className="text-md mt-2 italic">"{motivation?.quote}"</p>
-                        </div>
-                        <div className="text-6xl opacity-30">
-                           <Sparkles className="w-16 h-16" />
-                        </div>
-                    </>
-                )}
-            </CardContent>
-        </Card>
-    );
-};
-
-
 export default function JournalPage() {
   const { toast } = useToast();
-  const [entries, setEntries] = useSyncedLocalStorage<JournalEntry[]>(JOURNAL_STORAGE_KEY, []);
+  const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [isClient, setIsClient] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
 
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  const selectedDateString = useMemo(() => format(selectedDate, 'yyyy-MM-dd'), [selectedDate]);
-  
   const form = useForm<JournalFormValues>({
     resolver: zodResolver(journalSchema),
     defaultValues: {
@@ -135,130 +61,94 @@ export default function JournalPage() {
     },
   });
 
-  const todaysEntry = useMemo(() => entries.find(e => e.date === selectedDateString), [entries, selectedDateString]);
-  
-  const calculateStreak = useCallback(() => {
-    if (!entries.length) return 0;
-  
-    const sortedEntries = entries
-        .filter(e => e.abstained)
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  
-    if (sortedEntries.length === 0) return 0;
-  
-    let streak = 0;
-    let expectedDate = new Date();
-  
-    // Check if today is a streak day
-    const todayEntry = entries.find(e => isSameDay(new Date(e.date), expectedDate));
-    if (todayEntry?.abstained) {
-        streak++;
-        expectedDate = subDays(expectedDate, 1);
-    } else {
-        // If today is not a streak day, the streak is 0 unless we are looking at a past date
-         if (!isSameDay(selectedDate, new Date())) {
-             // If looking at a past date, calculate streak up to that date
-             expectedDate = selectedDate;
-         } else {
-            const yesterday = subDays(new Date(), 1);
-            const yesterdayEntry = entries.find(e => isSameDay(new Date(e.date), yesterday));
-            if(yesterdayEntry?.abstained) {
-                // continue streak from yesterday
-            } else {
-                return 0;
-            }
-         }
+  useEffect(() => {
+    setIsClient(true);
+    try {
+      const storedEntries = localStorage.getItem(JOURNAL_STORAGE_KEY);
+      if (storedEntries) {
+        const parsedEntries = JSON.parse(storedEntries);
+        setEntries(parsedEntries);
+        const todayEntry = parsedEntries.find((e: JournalEntry) => e.date === format(selectedDate, 'yyyy-MM-dd'));
+        if (todayEntry) {
+          form.reset(todayEntry);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load journal entries', error);
     }
+  }, [isClient, form, selectedDate]);
 
+  const selectedDateString = useMemo(() => format(selectedDate, 'yyyy-MM-dd'), [selectedDate]);
+
+  const calculateStreak = useCallback(() => {
     const sortedAbstinenceDays = entries
         .filter(e => e.abstained)
         .map(e => new Date(e.date))
         .sort((a, b) => b.getTime() - a.getTime());
+
+    if (sortedAbstinenceDays.length === 0) return 0;
 
     let currentStreak = 0;
     let lastDate = new Date();
     
     const todayIsTracked = sortedAbstinenceDays.some(d => isSameDay(d, lastDate));
     if (!todayIsTracked) {
-        lastDate = subDays(lastDate, 1);
+        // If today is not marked as abstained, start checking from yesterday
+        lastDate.setDate(lastDate.getDate() - 1);
     }
-    
+
     for (const date of sortedAbstinenceDays) {
         if (isSameDay(date, lastDate)) {
             currentStreak++;
-            lastDate = subDays(lastDate, 1);
+            lastDate.setDate(lastDate.getDate() - 1);
         } else {
+            // Break the loop if there's a gap in the streak
             break;
         }
     }
     return currentStreak;
-  }, [entries, selectedDate]);
-  
+  }, [entries]);
+
   const currentStreak = useMemo(() => calculateStreak(), [calculateStreak]);
 
-  useEffect(() => {
-    if (isClient) {
-        const entryForDate = entries.find(e => e.date === selectedDateString);
-        if (entryForDate) {
-            form.reset(entryForDate);
-        } else {
-            form.reset({
-                studyHours: 0,
-                quranPages: 0,
-                expenses: 0,
-                abstained: false,
-            });
-        }
-    }
-  }, [selectedDateString, entries, form, isClient]);
-
-
   const onSubmit: SubmitHandler<JournalFormValues> = (data) => {
-    setEntries((prev) => {
-      const newEntry = { date: selectedDateString, ...data, streak: 0 }; // Streak will be recalculated
-      const existingIndex = prev.findIndex((e) => e.date === selectedDateString);
-      
-      let updatedEntries;
-      if (existingIndex > -1) {
-        updatedEntries = [...prev];
-        updatedEntries[existingIndex] = { ...updatedEntries[existingIndex], ...newEntry };
-      } else {
-        updatedEntries = [...prev, newEntry];
-      }
-      return updatedEntries;
-    });
+    const newEntry = { date: selectedDateString, ...data, streak: 0 }; // streak is recalculated
+    const updatedEntries = entries.filter((e) => e.date !== selectedDateString);
+    setEntries([...updatedEntries, newEntry]);
     
-    // We don't show a toast on every auto-save
+    try {
+        localStorage.setItem(JOURNAL_STORAGE_KEY, JSON.stringify([...updatedEntries, newEntry]));
+        toast({
+            title: "Journal Saved",
+            description: "Your entry for today has been saved.",
+        });
+    } catch (error) {
+        console.error('Failed to save journal entry', error);
+        toast({
+            variant: 'destructive',
+            title: "Save Failed",
+            description: "Could not save your journal entry.",
+        });
+    }
   };
-
-  const formValues = form.watch();
-  useEffect(() => {
-    if(!isClient) return;
-    const debouncedSubmit = setTimeout(() => {
-        onSubmit(form.getValues());
-    }, 500); // Debounce time in ms
-
-    return () => clearTimeout(debouncedSubmit);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formValues, isClient, selectedDateString]);
 
   return (
     <div className="p-4 md:p-8 space-y-6">
       <header className="text-center">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          Today
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">
+          Daily Journal
         </h1>
+        <p className="text-muted-foreground">Track your daily habits and progress.</p>
       </header>
-
-      {isClient && <DateSelector selectedDate={selectedDate} setSelectedDate={setSelectedDate} />}
-      
-      {isClient && <MotivationCard />}
       
       <div className="space-y-4">
-        <FormProvider {...form}>
-            <form>
+        <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <Card>
-                    <CardContent className="p-4">
+                    <CardHeader>
+                        <CardTitle>Log for {format(selectedDate, "MMMM d, yyyy")}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 space-y-4">
                         <FormField
                             control={form.control}
                             name="abstained"
@@ -270,7 +160,7 @@ export default function JournalPage() {
                                      </div>
                                     <div>
                                         <FormLabel className="text-lg font-semibold">Self-Discipline</FormLabel>
-                                        <FormDescription>Current Streak: {currentStreak} days</FormDescription>
+                                        <FormDescription>Current Streak: {isClient ? currentStreak : 0} days</FormDescription>
                                     </div>
                                 </div>
                                 <FormControl>
@@ -283,12 +173,7 @@ export default function JournalPage() {
                             </FormItem>
                             )}
                         />
-                    </CardContent>
-                </Card>
-
-                 <Card>
-                    <CardContent className="p-4">
-                        <FormField
+                         <FormField
                             control={form.control}
                             name="studyHours"
                             render={({ field }) => (
@@ -299,7 +184,6 @@ export default function JournalPage() {
                                      </div>
                                     <div>
                                         <FormLabel className="text-lg font-semibold">Study</FormLabel>
-                                        <FormDescription>Track your learning</FormDescription>
                                     </div>
                                 </div>
                                 <FormControl>
@@ -319,12 +203,7 @@ export default function JournalPage() {
                             </FormItem>
                             )}
                         />
-                    </CardContent>
-                </Card>
-                
-                 <Card>
-                    <CardContent className="p-4">
-                        <FormField
+                         <FormField
                             control={form.control}
                             name="quranPages"
                             render={({ field }) => (
@@ -335,7 +214,6 @@ export default function JournalPage() {
                                      </div>
                                     <div>
                                         <FormLabel className="text-lg font-semibold">Quran</FormLabel>
-                                        <FormDescription>Pages read</FormDescription>
                                     </div>
                                 </div>
                                 <FormControl>
@@ -355,12 +233,7 @@ export default function JournalPage() {
                             </FormItem>
                             )}
                         />
-                    </CardContent>
-                </Card>
-
-                 <Card>
-                    <CardContent className="p-4">
-                        <FormField
+                         <FormField
                             control={form.control}
                             name="expenses"
                             render={({ field }) => (
@@ -371,7 +244,6 @@ export default function JournalPage() {
                                      </div>
                                     <div>
                                         <FormLabel className="text-lg font-semibold">Expenses</FormLabel>
-                                        <FormDescription>Daily spending</FormDescription>
                                     </div>
                                 </div>
                                 <FormControl>
@@ -387,8 +259,9 @@ export default function JournalPage() {
                         />
                     </CardContent>
                 </Card>
+                <Button type="submit" className="w-full">Save Journal</Button>
             </form>
-        </FormProvider>
+        </Form>
       </div>
     </div>
   );
