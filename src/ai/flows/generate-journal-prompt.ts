@@ -4,14 +4,10 @@
  * @fileOverview Generates a random, insightful journal prompt.
  *
  * - generateJournalPrompt - A function that returns a journal prompt.
- * - GenerateJournalPromptOutput - The return type for the generateJournalPrompt function.
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
-
-export const GenerateJournalPromptOutputSchema = z.string().describe("An insightful and concise journal prompt.");
-export type GenerateJournalPromptOutput = z.infer<typeof GenerateJournalPromptOutputSchema>;
+import { GenerateJournalPromptOutput, GenerateJournalPromptOutputSchema } from '@/lib/types';
 
 
 export async function generateJournalPrompt(): Promise<GenerateJournalPromptOutput> {

@@ -1,5 +1,6 @@
 
 import { Timestamp } from "firebase/firestore";
+import { z } from 'genkit';
 
 export type WeightEntry = {
   id: string;
@@ -54,3 +55,6 @@ export type AnalyzePhysicalProgressOutput = {
         diet: string;
     };
 };
+
+export const GenerateJournalPromptOutputSchema = z.string().describe("An insightful and concise journal prompt.");
+export type GenerateJournalPromptOutput = z.infer<typeof GenerateJournalPromptOutputSchema>;
