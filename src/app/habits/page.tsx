@@ -109,7 +109,7 @@ function HabitTrackerPage() {
           (doc) => ({ id: doc.id, ...doc.data() } as Habit)
         );
         setHabits(habitsData);
-        setIsLoading(false);
+        // We set loading to false in the other effect, after all data is fetched
       },
       (error) => {
         console.error('Error fetching habits:', error);
@@ -137,8 +137,10 @@ function HabitTrackerPage() {
         const entriesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as HabitEntry));
         setHabitEntries(entriesData);
       }
+      setIsLoading(false); // All essential data is now loaded
     }, (error) => {
       console.error("Error fetching today's habit entry:", error);
+      setIsLoading(false);
     });
 
     return () => unsubscribe();
