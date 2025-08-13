@@ -10,6 +10,7 @@ import {
   Utensils,
   Weight,
   Award,
+  User,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
@@ -42,9 +43,9 @@ const links: NavLink[] = [
     icon: Weight,
   },
   {
-    href: '/rewards',
-    label: 'Rewards',
-    icon: Award,
+    href: '/profile',
+    label: 'Profile',
+    icon: User,
   },
 ];
 
