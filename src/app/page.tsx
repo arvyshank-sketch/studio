@@ -45,6 +45,7 @@ import { db } from '@/lib/firebase';
 import type { DashboardStats, WeightEntry, UserProfile, DailyLog } from '@/lib/types';
 import { startOfWeek, endOfWeek, format } from 'date-fns';
 import { getLevel, getXpForLevel, badges as definedBadges } from '@/lib/gamification';
+import { cn } from '@/lib/utils';
 
 const featureCards = [
   {
@@ -168,9 +169,10 @@ function DashboardPage() {
   const xpForCurrentLevel = useMemo(() => getXpForLevel(currentLevel), [currentLevel]);
   const xpForNextLevel = useMemo(() => getXpForLevel(currentLevel + 1), [currentLevel]);
   const currentLevelProgress = useMemo(() => {
+    if (!profile?.xp) return 0;
     const totalXpInLevel = xpForNextLevel - xpForCurrentLevel;
-    const xpInCurrentLevel = (profile?.xp ?? 0) - xpForCurrentLevel;
-    return (xpInCurrentLevel / totalXpInLevel) * 100;
+    const xpInCurrentLevel = profile.xp - xpForCurrentLevel;
+    return totalXpInLevel > 0 ? (xpInCurrentLevel / totalXpInLevel) * 100 : 0;
   }, [profile, xpForCurrentLevel, xpForNextLevel]);
   const userBadges = useMemo(() => {
       if (!profile?.badges) return [];
@@ -194,15 +196,15 @@ function DashboardPage() {
     change?: number;
   }) => (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
         {icon}
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <Skeleton className="h-8 w-24" />
+          <Skeleton className="h-8 w-24 bg-gray-500/20" />
         ) : (
-          <div className="text-2xl font-bold">
+          <div className="text-3xl font-bold">
             {value}
             <span className="text-sm font-normal text-muted-foreground">
               {unit}
@@ -210,8 +212,12 @@ function DashboardPage() {
           </div>
         )}
         {change !== undefined && !isLoading && (
-          <p className="text-xs text-muted-foreground">
-            {change > 0 ? `+${change.toFixed(1)}kg` : `${change.toFixed(1)}kg`}{' '}
+          <p className="text-xs text-muted-foreground mt-1">
+            <span className={cn(
+                change > 0 ? "text-red-400" : "text-green-400"
+            )}>
+              {change > 0 ? `+${change.toFixed(1)}kg` : `${change.toFixed(1)}kg`}{' '}
+            </span>
             from last week
           </p>
         )}
@@ -223,10 +229,10 @@ function DashboardPage() {
     <div className="flex flex-col gap-8 p-4 md:p-8">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-4xl break-words">
-            {greeting}, {user?.displayName || user?.email}!
+          <h1 className="text-4xl font-bold tracking-tight text-foreground md:text-5xl break-words">
+            {greeting}, {user?.displayName?.split(' ')[0] || user?.email}!
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-lg mt-1">
             Your personal dashboard for holistic growth.
           </p>
         </div>
@@ -245,46 +251,52 @@ function DashboardPage() {
        <Card>
         <CardHeader>
           <CardTitle>Your Progress</CardTitle>
-          <CardDescription>Level up by completing your daily tasks.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
           {isLoading || !profile ? (
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-1/4" />
-              <Skeleton className="h-4 w-full" />
+            <div className="space-y-3">
+              <Skeleton className="h-6 w-1/4 bg-gray-500/20" />
+              <Skeleton className="h-4 w-full bg-gray-500/20" />
             </div>
           ) : (
             <div>
-              <div className="flex justify-between items-center mb-1">
-                <span className="font-bold text-primary">Level {currentLevel}</span>
+              <div className="flex justify-between items-baseline mb-2">
+                <span className="font-bold text-xl bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-400">Level {currentLevel}</span>
                 <span className="text-sm text-muted-foreground">
                   {profile.xp ?? 0} / {xpForNextLevel} XP
                 </span>
               </div>
-              <Progress value={currentLevelProgress} className="h-2" />
+              <Progress value={currentLevelProgress} className="h-3 rounded-full" />
             </div>
           )}
            <div>
-            <h4 className="text-sm font-medium mb-2">Badges</h4>
+            <h4 className="text-lg font-medium mb-3">Badges</h4>
              {isLoading || !profile ? (
                 <div className="flex gap-4">
-                    <Skeleton className="size-16 rounded-full" />
-                    <Skeleton className="size-16 rounded-full" />
-                    <Skeleton className="size-16 rounded-full" />
+                    <Skeleton className="size-20 rounded-full bg-gray-500/20" />
+                    <Skeleton className="size-20 rounded-full bg-gray-500/20" />
+                    <Skeleton className="size-20 rounded-full bg-gray-500/20" />
                 </div>
-             ) : userBadges.length > 0 ? (
-                 <div className="flex flex-wrap gap-4">
-                     {userBadges.map(badge => (
-                         <div key={badge.id} className="flex flex-col items-center text-center gap-1" title={`${badge.name}: ${badge.description}`}>
-                            <div className="flex items-center justify-center size-16 rounded-full bg-accent text-accent-foreground border-2 border-amber-400">
-                               <badge.icon className="size-8" />
-                            </div>
-                            <span className="text-xs w-16 truncate">{badge.name}</span>
-                         </div>
-                     ))}
-                 </div>
              ) : (
-                <p className="text-sm text-muted-foreground">No badges unlocked yet. Keep logging to earn them!</p>
+                 <div className="flex flex-wrap gap-4">
+                     {definedBadges.map(badge => {
+                        const isUnlocked = userBadges.some(b => b.id === badge.id);
+                        return (
+                         <div key={badge.id} className="flex flex-col items-center text-center gap-2" title={`${badge.name}: ${badge.description}`}>
+                            <div className={cn(
+                                "flex items-center justify-center size-20 rounded-full bg-card-foreground/5 border-2",
+                                isUnlocked ? "border-accent text-accent" : "border-muted-foreground/20 text-muted-foreground/40"
+                            )}>
+                               <badge.icon className="size-10" />
+                            </div>
+                            <span className={cn(
+                                "text-xs w-20 truncate font-medium",
+                                isUnlocked ? "text-foreground" : "text-muted-foreground/60"
+                            )}>{badge.name}</span>
+                         </div>
+                        );
+                     })}
+                 </div>
              )}
            </div>
         </CardContent>
@@ -299,9 +311,9 @@ function DashboardPage() {
           unit=" kg"
           icon={
             stats && stats.weeklyWeightChange < 0 ? (
-              <TrendingDown className="h-4 w-4 text-muted-foreground" />
+              <TrendingDown className="h-5 w-5 text-green-400" />
             ) : (
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <TrendingUp className="h-5 w-5 text-red-400" />
             )
           }
           isLoading={isLoading}
@@ -309,39 +321,39 @@ function DashboardPage() {
         <StatCard
           title="Days Logged This Week"
           value={stats?.weeklyJournalEntries ?? 0}
-          icon={<PenSquare className="h-4 w-4 text-muted-foreground" />}
+          unit="/7"
+          icon={<PenSquare className="h-5 w-5 text-muted-foreground" />}
           isLoading={isLoading}
         />
         <StatCard
           title="Longest Abstinence Streak"
           value={stats?.longestHabitStreak ?? 0}
           unit=" days"
-          icon={<Flame className="h-4 w-4 text-muted-foreground" />}
+          icon={<Flame className="h-5 w-5 text-muted-foreground" />}
           isLoading={isLoading}
         />
       </div>
 
       {/* Quick Links Section */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {featureCards.map((feature) => (
-          <Link href={feature.href} key={feature.title} className="flex">
-            <Card className="flex w-full flex-col justify-between transition-all hover:shadow-lg hover:scale-[1.02] dark:bg-card dark:hover:border-primary/50">
-              <CardHeader>
-                <div className="mb-4 flex size-12 items-center justify-center rounded-lg bg-primary/10">
-                  {feature.icon}
-                </div>
-                <CardTitle>{feature.title}</CardTitle>
-                <CardDescription>{feature.description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <span className="text-sm font-medium text-primary">
-                  Go to {feature.title}{' '}
-                  <ArrowRight className="ml-1 inline size-4" />
-                </span>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight mb-4">Quick Links</h2>
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            {featureCards.map((feature) => (
+            <Link href={feature.href} key={feature.title} className="flex">
+                <Card className="w-full transition-all hover:shadow-lg hover:scale-[1.02] dark:hover:border-primary/50">
+                <CardHeader>
+                    <div className="mb-4 flex size-12 items-center justify-center rounded-lg bg-primary/10">
+                    {feature.icon}
+                    </div>
+                    <CardTitle>{feature.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-sm text-muted-foreground">{feature.description}</p>
+                </CardContent>
+                </Card>
+            </Link>
+            ))}
+        </div>
       </div>
     </div>
   );

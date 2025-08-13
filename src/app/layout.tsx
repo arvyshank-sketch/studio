@@ -6,7 +6,11 @@ import { Toaster } from '@/components/ui/toaster';
 import { AuthContextProvider } from '@/context/auth-context';
 import { ThemeProvider } from '@/components/theme-provider';
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
+const inter = Inter({ 
+  subsets: ['latin'], 
+  variable: '--font-inter',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'Synergy',
@@ -23,7 +27,7 @@ export default function RootLayout({
       <body className="h-full font-body antialiased bg-background">
         <ThemeProvider
             attribute="class"
-            defaultTheme="system"
+            defaultTheme="dark"
             enableSystem
             disableTransitionOnChange
         >

@@ -4,28 +4,28 @@
 
 @layer base {
   :root {
-    --background: 257 100% 97%; /* Light Lavender */
-    --foreground: 260 22% 21%; /* Dark Purple Text */
-    --card: 0 0% 100%;
-    --card-foreground: 260 22% 21%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 260 22% 21%;
-    --primary: 258 68% 56%; /* Main Purple */
-    --primary-foreground: 0 0% 100%;
+    --background: 210 17% 95%; /* Light Blue-Gray */
+    --foreground: 224 10% 10%;
+    --card: 210 17% 98%;
+    --card-foreground: 224 10% 10%;
+    --popover: 210 17% 98%;
+    --popover-foreground: 224 10% 10%;
+    --primary: 207 90% 68%; /* Calm Blue */
+    --primary-foreground: 224 10% 10%;
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
     --muted: 220 14% 92%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 45 100% 51%; /* Yellow for CTA */
-    --accent-foreground: 260 22% 21%;
+    --accent: 34 100% 65%; /* Warm Orange */
+    --accent-foreground: 224 10% 10%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 258 68% 56%;
+    --ring: 207 90% 68%;
     --radius: 0.75rem;
 
-    --chart-1: 258 68% 56%;
+    --chart-1: 207 90% 68%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
@@ -42,27 +42,27 @@
   }
 
   .dark {
-    --background: 260 22% 12%;
+    --background: 210 10% 15%; /* Dark Blue-Gray */
     --foreground: 0 0% 98%;
-    --card: 260 22% 16%;
+    --card: 210 10% 20%;
     --card-foreground: 0 0% 98%;
-    --popover: 260 22% 12%;
+    --popover: 210 10% 12%;
     --popover-foreground: 0 0% 98%;
-    --primary: 258 68% 66%;
-    --primary-foreground: 260 22% 12%;
+    --primary: 207 90% 68%; /* Calm Blue */
+    --primary-foreground: 210 10% 15%;
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
     --muted: 217.2 32.6% 22.5%;
     --muted-foreground: 215 20.2% 65.1%;
-    --accent: 45 100% 61%;
-    --accent-foreground: 260 22% 12%;
+    --accent: 34 100% 65%; /* Warm Orange */
+    --accent-foreground: 210 10% 15%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
     --border: 217.2 32.6% 27.5%;
     --input: 217.2 32.6% 27.5%;
-    --ring: 258 68% 66%;
+    --ring: 207 90% 68%;
 
-    --chart-1: 258 68% 66%;
+    --chart-1: 207 90% 68%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
