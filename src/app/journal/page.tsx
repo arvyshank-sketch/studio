@@ -272,10 +272,16 @@ function DailyLogPage() {
             userId: user.uid,
             transaction: transaction,
             checkForPenalties: true, // Enable penalty check
+            habits,
         });
 
         if (gamificationResult.penaltyXp && gamificationResult.penaltyXp < 0) {
             penaltyToastDescription = `You lost ${Math.abs(gamificationResult.penaltyXp)} XP for skipping yesterday's tasks.`;
+        }
+        
+        if (gamificationResult.habitPenaltyXp && gamificationResult.habitPenaltyXp < 0) {
+             const existingPenalty = penaltyToastDescription.length > 0;
+             penaltyToastDescription += `${existingPenalty ? ' ' : ''}You also lost ${Math.abs(gamificationResult.habitPenaltyXp)} XP for unfinished habits.`;
         }
 
         transaction.set(docRef, logData, { merge: true });

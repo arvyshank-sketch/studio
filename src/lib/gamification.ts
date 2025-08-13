@@ -1,5 +1,5 @@
 
-import type { UserProfile, DailyLog, Badge, UnexpectedQuest } from './types';
+import type { UserProfile, DailyLog, Badge, UnexpectedQuest, Habit } from './types';
 import { parseISO, differenceInCalendarDays, format, subDays } from 'date-fns';
 import { Book, Calendar, Flame, Target } from 'lucide-react';
 import { collection, query, where, getDocs, doc, Transaction, getDoc } from 'firebase/firestore';
@@ -21,6 +21,7 @@ export const XP_REWARDS = {
   UNEXPECTED_QUEST_PENALTY: -50,
   DAILY_QUEST_MISSED_PENALTY: -50,
   CALORIE_LOG_MISSED_PENALTY: -50,
+  CUSTOM_HABIT_PENALTY: -15,
 };
 
 /**
@@ -148,6 +149,7 @@ interface ProcessGamificationArgs {
     transaction: Transaction;
     customXp?: number;
     checkForPenalties?: boolean;
+    habits?: Habit[];
 }
 
 
@@ -163,9 +165,11 @@ export const processGamification = async ({
     transaction,
     customXp,
     checkForPenalties = false,
+    habits = [],
 }: ProcessGamificationArgs) => {
   let earnedXp = 0;
   let penaltyXp = 0;
+  let habitPenaltyXp = 0;
 
   // --- 1. Calculate XP for the new log ---
   if (customXp) {
@@ -185,6 +189,13 @@ export const processGamification = async ({
       if (newLog.customHabits) {
         const completedHabits = Object.values(newLog.customHabits).filter(Boolean).length;
         earnedXp += completedHabits * XP_REWARDS.CUSTOM_HABIT;
+
+        // Calculate penalty for uncompleted habits
+        habits.forEach(habit => {
+            if (!newLog.customHabits?.[habit.id]) {
+                habitPenaltyXp += XP_REWARDS.CUSTOM_HABIT_PENALTY;
+            }
+        });
       }
   }
 
@@ -223,7 +234,7 @@ export const processGamification = async ({
 
   let currentXp = userProfile.xp ?? 0;
   let currentLevel = userProfile.level ?? 1;
-  let newXp = currentXp + earnedXp + penaltyXp;
+  let newXp = currentXp + earnedXp + penaltyXp + habitPenaltyXp;
   if (newXp < 0) newXp = 0; // Don't let XP go negative
 
   // --- 3. Check for Level Up ---
@@ -263,5 +274,5 @@ export const processGamification = async ({
     badges: Array.from(currentBadges),
   };
 
-  return { updatedProfile, leveledUp, penaltyXp };
+  return { updatedProfile, leveledUp, penaltyXp, habitPenaltyXp };
 };
