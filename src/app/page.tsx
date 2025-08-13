@@ -64,9 +64,6 @@ import { LevelUpModal } from '@/components/level-up-modal';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 
-
-const QUEST_GENERATION_CHANCE = 0.25; // 25% chance to get a quest each day
-
 function DashboardPage() {
   const { user } = useAuth();
   const { theme, setTheme } = useTheme();
@@ -131,15 +128,16 @@ function DashboardPage() {
 
   // Unexpected Quest generation and listener
   useEffect(() => {
-      if (!user) return;
+      if (!user || !profile?.createdAt) return;
       const todayStr = format(new Date(), 'yyyy-MM-dd');
       const questDocRef = doc(db, 'users', user.uid, 'unexpectedQuests', todayStr);
 
       const generateQuest = async () => {
           const docSnap = await getDoc(questDocRef);
           if (!docSnap.exists()) {
-              // No quest for today, try to generate one
-              if (Math.random() < QUEST_GENERATION_CHANCE) {
+              // No quest for today, try to generate one based on a 2-day cycle
+              const daysSinceJoined = differenceInCalendarDays(new Date(), profile.createdAt.toDate());
+              if (daysSinceJoined % 2 === 0) { // Generate quest on even days
                   const newQuest: UnexpectedQuest = {
                       id: todayStr,
                       title: 'Unexpected Quest',
@@ -171,7 +169,7 @@ function DashboardPage() {
       
       return () => unsubscribe();
 
-  }, [user]);
+  }, [user, profile]);
 
 
   // Fetch dashboard stats
