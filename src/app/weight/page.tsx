@@ -226,6 +226,7 @@ function WeightPage() {
   
   const chartData = useMemo(() => {
     return [...entries]
+      .filter(e => e.date) // Ensure date exists
       .sort((a, b) => (a.date as Timestamp).toMillis() - (b.date as Timestamp).toMillis())
       .map(e => ({
           ...e,
@@ -459,3 +460,5 @@ function WeightPage() {
 }
 
 export default withAuth(WeightPage);
+
+    

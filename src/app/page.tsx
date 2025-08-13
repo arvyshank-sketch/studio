@@ -21,6 +21,8 @@ import {
   Sun,
   BarChart,
   Loader2,
+  Book,
+  Utensils,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { useTheme } from '@/hooks/use-theme';
@@ -51,6 +53,9 @@ import {
   CartesianGrid,
   Bar,
   Line,
+  AreaChart,
+  Area,
+  BarChart as RechartsBarChart,
 } from 'recharts';
 
 
@@ -234,21 +239,29 @@ function DashboardPage() {
     </Card>
   );
   
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload, label, unit = '' }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="p-4 bg-card border border-border rounded-lg shadow-lg">
+        <div className="p-2 bg-card border border-border rounded-lg shadow-lg">
           <p className="label font-bold text-foreground">{`${label}`}</p>
-          {payload.map((pld: any, index: number) => (
-             <p key={index} style={{ color: pld.color }}>
-                {`${pld.name}: ${pld.value.toLocaleString()}${pld.unit || ''}`}
-             </p>
-          ))}
+          <p className="intro" style={{ color: payload[0].stroke || payload[0].fill }}>
+            {`${payload[0].name}: ${payload[0].value.toLocaleString()}${unit}`}
+          </p>
         </div>
       );
     }
     return null;
   };
+
+  const ChartPlaceholder = () => (
+    <div className="flex h-full flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center">
+        <BarChart className="mx-auto mb-4 size-12 text-muted-foreground" />
+        <h3 className="text-lg font-semibold">No Data Yet</h3>
+        <p className="text-sm text-muted-foreground">
+            Log your activities for a few days to see a chart of your progress.
+        </p>
+    </div>
+  );
 
   return (
     <div className="flex flex-col gap-8 p-4 md:p-8">
@@ -361,42 +374,62 @@ function DashboardPage() {
       </div>
 
        {/* Chart Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Weekly Summary</CardTitle>
-          <CardDescription>Your activity over the last 7 days.</CardDescription>
-        </CardHeader>
-        <CardContent className="h-[400px] w-full pr-4">
-          {isLoading ? (
-            <div className="flex h-full items-center justify-center">
-              <Loader2 className="size-8 animate-spin text-primary" />
-            </div>
-          ) : chartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" />
-                <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend wrapperStyle={{fontSize: "12px"}} />
-                <Bar dataKey="calories" name="Calories" fill="hsl(var(--primary))" barSize={20} unit=" kcal" />
-                <Line type="monotone" dataKey="study" name="Study" stroke="hsl(var(--chart-2))" strokeWidth={2} unit=" hrs" />
-                <Line type="monotone" dataKey="quran" name="Quran" stroke="hsl(var(--chart-4))" strokeWidth={2} unit=" pgs" />
-              </ComposedChart>
-            </ResponsiveContainer>
-          ) : (
-             <div className="flex h-full flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center">
-                <BarChart className="mx-auto mb-4 size-12 text-muted-foreground" />
-                <h3 className="text-lg font-semibold">No Data Yet</h3>
-                <p className="text-sm text-muted-foreground">
-                    Log your activities for a few days to see a chart of your progress.
-                </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Utensils /> Calories Logged</CardTitle>
+                    <CardDescription>Daily calorie intake for the last 7 days.</CardDescription>
+                </CardHeader>
+                <CardContent className="h-[300px] w-full pr-4">
+                    {isLoading ? ( <Loader2 className="size-8 animate-spin text-primary mx-auto" /> ) : chartData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                        <RechartsBarChart data={chartData}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" />
+                            <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                            <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                            <Tooltip content={<CustomTooltip unit=" kcal" />} />
+                            <Bar dataKey="calories" name="Calories" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                        </RechartsBarChart>
+                    </ResponsiveContainer>
+                    ) : ( <ChartPlaceholder /> )}
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Book /> Study & Quran</CardTitle>
+                    <CardDescription>Daily progress for the last 7 days.</CardDescription>
+                </CardHeader>
+                 <CardContent className="h-[300px] w-full pr-4">
+                    {isLoading ? ( <Loader2 className="size-8 animate-spin text-primary mx-auto" /> ) : chartData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={chartData}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" />
+                            <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                            <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                            <Tooltip content={<CustomTooltip />} />
+                            <Legend wrapperStyle={{fontSize: "12px"}} />
+                            <defs>
+                                <linearGradient id="colorStudy" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.8}/>
+                                    <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0}/>
+                                </linearGradient>
+                                <linearGradient id="colorQuran" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="hsl(var(--chart-4))" stopOpacity={0.8}/>
+                                    <stop offset="95%" stopColor="hsl(var(--chart-4))" stopOpacity={0}/>
+                                </linearGradient>
+                            </defs>
+                            <Area type="monotone" dataKey="study" name="Study (hrs)" stroke="hsl(var(--chart-2))" fill="url(#colorStudy)" />
+                            <Area type="monotone" dataKey="quran" name="Quran (pgs)" stroke="hsl(var(--chart-4))" fill="url(#colorQuran)" />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                    ) : ( <ChartPlaceholder /> )}
+                </CardContent>
+            </Card>
+       </div>
     </div>
   );
 }
 
 export default withAuth(DashboardPage);
+
+    
