@@ -1,3 +1,4 @@
+
 'use client';
 
 import withAuth from '@/components/with-auth';
@@ -9,7 +10,7 @@ import {
   CardDescription,
   CardContent,
 } from '@/components/ui/card';
-import { ArrowRight, BookMarked, Sparkles, TrendingUp, UtensilsCrossed } from 'lucide-react';
+import { ArrowRight, BookMarked, Sparkles, UtensilsCrossed, Weight } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 
 const featureCards = [
@@ -23,7 +24,7 @@ const featureCards = [
     title: 'Weight Tracking',
     description: 'Log your weight and see your progress over time.',
     href: '/weight',
-    icon: <TrendingUp className="size-8 text-primary" />,
+    icon: <Weight className="size-8 text-primary" />,
   },
   {
     title: 'Diet & Calories',

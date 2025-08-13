@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -10,6 +11,7 @@ import {
   BookOpenCheck,
   Utensils,
   LogOut,
+  Weight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
@@ -47,7 +49,7 @@ const links: NavLink[] = [
   {
     href: '/weight',
     label: 'Weight',
-    icon: TrendingUp,
+    icon: Weight,
   },
 ];
 

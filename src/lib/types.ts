@@ -1,7 +1,9 @@
+
 import { Timestamp } from "firebase/firestore";
 
 export type WeightEntry = {
-  date: string;
+  id: string;
+  date: Timestamp;
   weight: number;
 };
 
@@ -30,6 +32,15 @@ export type JournalEntry = {
   tags: string[];
   createdAt: Timestamp;
 };
+
+export type UserProfile = {
+    uid: string;
+    email: string;
+    displayName: string;
+    photoURL?: string;
+    createdAt: Timestamp;
+    height?: number; // in cm
+}
 
 
 export type ProgressEntry = {
