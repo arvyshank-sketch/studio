@@ -312,7 +312,7 @@ function DashboardPage() {
           ) : (
             <div>
               <div className="flex justify-between items-baseline mb-2">
-                <span className="font-bold text-xl bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-400">Level {currentLevel}</span>
+                <span className="font-bold text-xl bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">Level {currentLevel}</span>
                 <span className="text-sm text-muted-foreground">
                   {profile.xp ?? 0} / {xpForNextLevel} XP
                 </span>
@@ -496,11 +496,11 @@ function DashboardPage() {
             <CardContent>
                 <div className='flex items-center justify-around text-center'>
                     <div>
-                        <p className='text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-400'>{challengeProgress.week}</p>
+                        <p className='text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent'>{challengeProgress.week}</p>
                         <p className='text-muted-foreground'>Week</p>
                     </div>
                      <div>
-                        <p className='text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-400'>{challengeProgress.day}</p>
+                        <p className='text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent'>{challengeProgress.day}</p>
                         <p className='text-muted-foreground'>Day</p>
                     </div>
                 </div>
@@ -512,5 +512,3 @@ function DashboardPage() {
 }
 
 export default withAuth(DashboardPage);
-
-    

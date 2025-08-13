@@ -41,29 +41,30 @@
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
+  /* Solo Leveling Dark Theme */
   .dark {
-    --background: 210 10% 15%; /* Dark Blue-Gray */
-    --foreground: 0 0% 98%;
-    --card: 210 10% 20%;
-    --card-foreground: 0 0% 98%;
-    --popover: 210 10% 12%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 207 90% 68%; /* Calm Blue */
-    --primary-foreground: 210 10% 15%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 22.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 34 100% 65%; /* Warm Orange */
-    --accent-foreground: 210 10% 15%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 27.5%;
-    --input: 217.2 32.6% 27.5%;
-    --ring: 207 90% 68%;
+    --background: 246 24% 9%;      /* Deep, dark purple-gray */
+    --foreground: 240 10% 89%;     /* Off-white */
+    --card: 246 24% 12%;          /* Slightly lighter card background */
+    --card-foreground: 240 10% 89%;
+    --popover: 246 24% 9%;
+    --popover-foreground: 240 10% 89%;
+    --primary: 258 87% 66%;       /* Electric Purple */
+    --primary-foreground: 240 10% 95%;
+    --secondary: 220 15% 25%;
+    --secondary-foreground: 240 10% 89%;
+    --muted: 246 24% 18%;
+    --muted-foreground: 240 8% 60%;
+    --accent: 210 90% 60%;         /* Bright Electric Blue */
+    --accent-foreground: 224 10% 10%;
+    --destructive: 350 78% 55%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 246 24% 20%;
+    --input: 246 24% 20%;
+    --ring: 258 87% 66%;           /* Electric Purple */
 
-    --chart-1: 207 90% 68%;
-    --chart-2: 160 60% 45%;
+    --chart-1: 258 87% 66%;
+    --chart-2: 210 90% 60%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
