@@ -48,8 +48,8 @@ import { Slider }from '@/components/ui/slider';
 
 const logSchema = z.object({
   studyDuration: z.coerce.number().min(0).max(8, "Study duration cannot exceed 8 hours").optional(),
-  quranPagesRead: z.coerce.number().min(0, 'Must be a positive number').optional(),
-  expenses: z.coerce.number().min(0, 'Must be a positive number').optional(),
+  quranPagesRead: z.coerce.number().min(0, 'Must be a positive number').max(1000, "That's more pages than in the entire Qur'an!").optional(),
+  expenses: z.coerce.number().min(0, 'Must be a positive number').max(1000000, "Please enter a reasonable expense amount.").optional(),
   abstained: z.boolean().default(false),
   notes: z.string().optional(),
 });
@@ -339,3 +339,5 @@ function DailyLogPage() {
 }
 
 export default withAuth(DailyLogPage);
+
+    
