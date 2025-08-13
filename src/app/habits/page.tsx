@@ -379,7 +379,7 @@ function HabitTrackerPage() {
         <div className="space-y-4">
           {habits.map(habit => {
             const IconComponent = Lucide[habit.icon as keyof typeof Lucide] as Lucide.LucideIcon;
-            const isChecked = todayEntry?.completedHabitIds.includes(habit.id) ?? false;
+            const isChecked = todayEntry ? todayEntry.completedHabitIds.includes(habit.id) : false;
             return (
               <Card key={habit.id} className="transition-all hover:shadow-md">
                 <CardContent className="p-4 flex items-center gap-4">
