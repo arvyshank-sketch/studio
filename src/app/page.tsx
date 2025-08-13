@@ -196,13 +196,13 @@ function DashboardPage() {
     change?: number;
   }) => (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex-row items-center justify-between">
         <CardTitle>{title}</CardTitle>
         {icon}
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <Skeleton className="h-8 w-24 bg-gray-500/20" />
+          <Skeleton className="h-8 w-24 bg-muted/20" />
         ) : (
           <div className="text-3xl font-bold">
             {value}
@@ -229,7 +229,7 @@ function DashboardPage() {
     <div className="flex flex-col gap-8 p-4 md:p-8">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-bold tracking-tight text-foreground md:text-5xl break-words">
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground break-words">
             {greeting}, {user?.displayName?.split(' ')[0] || user?.email}!
           </h1>
           <p className="text-muted-foreground text-lg mt-1">
@@ -249,14 +249,14 @@ function DashboardPage() {
 
       {/* Gamification Section */}
        <Card>
-        <CardHeader>
+        <CardHeader className="flex-row items-center justify-between">
           <CardTitle>Your Progress</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           {isLoading || !profile ? (
             <div className="space-y-3">
-              <Skeleton className="h-6 w-1/4 bg-gray-500/20" />
-              <Skeleton className="h-4 w-full bg-gray-500/20" />
+              <Skeleton className="h-6 w-1/4 bg-muted/20" />
+              <Skeleton className="h-4 w-full bg-muted/20" />
             </div>
           ) : (
             <div>
@@ -273,9 +273,9 @@ function DashboardPage() {
             <h4 className="text-lg font-medium mb-3">Badges</h4>
              {isLoading || !profile ? (
                 <div className="flex gap-4">
-                    <Skeleton className="size-20 rounded-full bg-gray-500/20" />
-                    <Skeleton className="size-20 rounded-full bg-gray-500/20" />
-                    <Skeleton className="size-20 rounded-full bg-gray-500/20" />
+                    <Skeleton className="size-20 rounded-full bg-muted/20" />
+                    <Skeleton className="size-20 rounded-full bg-muted/20" />
+                    <Skeleton className="size-20 rounded-full bg-muted/20" />
                 </div>
              ) : (
                  <div className="flex flex-wrap gap-4">
@@ -284,8 +284,8 @@ function DashboardPage() {
                         return (
                          <div key={badge.id} className="flex flex-col items-center text-center gap-2" title={`${badge.name}: ${badge.description}`}>
                             <div className={cn(
-                                "flex items-center justify-center size-20 rounded-full bg-card-foreground/5 border-2",
-                                isUnlocked ? "border-accent text-accent" : "border-muted-foreground/20 text-muted-foreground/40"
+                                "flex items-center justify-center size-20 rounded-full bg-card/80 border-2",
+                                isUnlocked ? "border-accent text-accent" : "border-muted/20 text-muted-foreground/40"
                             )}>
                                <badge.icon className="size-10" />
                             </div>
@@ -341,11 +341,11 @@ function DashboardPage() {
             {featureCards.map((feature) => (
             <Link href={feature.href} key={feature.title} className="flex">
                 <Card className="w-full transition-all hover:shadow-lg hover:scale-[1.02] dark:hover:border-primary/50">
-                <CardHeader>
+                <CardHeader className="flex-row items-start gap-4">
                     <div className="mb-4 flex size-12 items-center justify-center rounded-lg bg-primary/10">
-                    {feature.icon}
+                      {feature.icon}
                     </div>
-                    <CardTitle>{feature.title}</CardTitle>
+                    <CardTitle className="text-base font-bold text-foreground">{feature.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <p className="text-sm text-muted-foreground">{feature.description}</p>
@@ -360,3 +360,5 @@ function DashboardPage() {
 }
 
 export default withAuth(DashboardPage);
+
+    
