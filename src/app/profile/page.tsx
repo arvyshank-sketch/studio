@@ -5,8 +5,7 @@ import { useState, useEffect, useMemo } from 'react';
 import withAuth from "@/components/with-auth";
 import { useAuth } from "@/context/auth-context";
 import { auth, db } from '@/lib/firebase';
-import { doc, onSnapshot, collection, updateDoc } from 'firebase/firestore';
-import { updateProfile } from 'firebase/auth';
+import { doc, onSnapshot, collection } from 'firebase/firestore';
 import type { UserProfile, UserReward, Reward } from '@/lib/types';
 import { getLevel, getXpForLevel, XP_REWARDS } from '@/lib/gamification';
 import { ALL_REWARDS } from '@/lib/rewards';
@@ -19,26 +18,16 @@ import {
   CardTitle,
   CardFooter,
 } from '@/components/ui/card';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { User, Shield, CheckCircle, XCircle, LogOut, Award, MessageSquare, Star, Lock, Pencil, Loader2 } from 'lucide-react';
+import { User, Shield, CheckCircle, XCircle, LogOut, Award, MessageSquare, Star, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
 import SafeImage from '@/components/SafeImage';
-
 
 const rarityStyles = {
   common: {
@@ -67,17 +56,6 @@ const getRewardIcon = (type: string) => {
     }
 }
 
-const jinwooAvatars = [
-    { id: '1', src: 'https://placehold.co/128x128.png', hint: 'sung jin woo cool'},
-    { id: '2', src: 'https://placehold.co/128x128.png', hint: 'sung jin woo monarch'},
-    { id: '3', src: 'https://placehold.co/128x128.png', hint: 'sung jin woo dagger'},
-    { id: '4', src: 'https://placehold.co/128x128.png', hint: 'sung jin woo glowing'},
-    { id: '5', src: 'https://placehold.co/128x128.png', hint: 'sung jin woo shadow'},
-    { id: '6', src: 'https://placehold.co/128x128.png', hint: 'sung jin woo smile'},
-    { id: '7', src: 'https://placehold.co/128x128.png', hint: 'sung jin woo fighting'},
-    { id: '8', src: 'https://placehold.co/128x128.png', hint: 'sung jin woo portrait'},
-];
-
 const Commandment = ({ text, xp, isPenalty = false }: { text: string; xp: number; isPenalty?: boolean }) => (
     <li className="flex justify-between items-center">
         <div className="flex items-center gap-2">
@@ -93,12 +71,9 @@ const Commandment = ({ text, xp, isPenalty = false }: { text: string; xp: number
 function ProfilePage() {
   const { user } = useAuth();
   const router = useRouter();
-  const { toast } = useToast();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [unlockedRewards, setUnlockedRewards] = useState<UserReward[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false);
-  const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -132,30 +107,6 @@ function ProfilePage() {
     router.push('/login');
   };
 
-  const handleAvatarSelect = async (photoURL: string, hint: string) => {
-    if (!user) return;
-    setIsUpdatingAvatar(true);
-    
-    const finalUrl = new URL(photoURL);
-    finalUrl.searchParams.set('text', hint.replace(/ /g, '+'));
-
-    try {
-        await updateProfile(user, { photoURL: finalUrl.href });
-        const userDocRef = doc(db, 'users', user.uid);
-        await updateDoc(userDocRef, { photoURL: finalUrl.href });
-
-        setProfile(prev => prev ? { ...prev, photoURL: finalUrl.href } : null);
-
-        toast({ title: "Avatar updated!", description: "Your new look is ready."});
-        setIsAvatarDialogOpen(false);
-    } catch (error) {
-        console.error("Error updating avatar:", error);
-        toast({ variant: 'destructive', title: "Error", description: "Could not update your avatar."});
-    } finally {
-        setIsUpdatingAvatar(false);
-    }
-  }
-
   const currentLevel = useMemo(() => profile ? getLevel(profile.xp ?? 0) : 1, [profile]);
   const xpForCurrentLevel = useMemo(() => getXpForLevel(currentLevel), [currentLevel]);
   const xpForNextLevel = useMemo(() => getXpForLevel(currentLevel + 1), [currentLevel]);
@@ -177,7 +128,6 @@ function ProfilePage() {
       }).sort((a,b) => (b.unlocked ? 1 : 0) - (a.unlocked ? 1 : 0));
   }, [unlockedRewards]);
 
-
   const InfoRow = ({ label, value }: { label: string; value: string | undefined }) => (
       <div className="flex justify-between items-center py-3 border-b border-border/50">
           <dt className="text-muted-foreground">{label}</dt>
@@ -187,13 +137,10 @@ function ProfilePage() {
 
   return (
     <div className="p-4 md:p-8">
-      <Dialog open={isAvatarDialogOpen} onOpenChange={setIsAvatarDialogOpen}>
         <header className="mb-8 flex items-center gap-4">
             {isLoading ? (
-            <Skeleton className="size-20 rounded-full" />
+                <Skeleton className="size-20 rounded-full" />
             ) : (
-            <DialogTrigger asChild>
-                <button className="relative group">
                 <Avatar className="size-20 border-2 border-primary overflow-hidden">
                     <SafeImage
                         src={profile?.photoURL}
@@ -201,17 +148,11 @@ function ProfilePage() {
                         width={80}
                         height={80}
                         className="h-20 w-20 object-cover"
-                        unopt={false}
                     />
                     <AvatarFallback className="text-2xl bg-muted">
-                    {profile?.displayName?.charAt(0)?.toUpperCase() || "?"}
+                        {profile?.displayName?.charAt(0)?.toUpperCase() || "?"}
                     </AvatarFallback>
                 </Avatar>
-                <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Pencil className="size-8 text-white" />
-                </div>
-                </button>
-            </DialogTrigger>
             )}
             <div>
             {isLoading ? (
@@ -229,39 +170,6 @@ function ProfilePage() {
             )}
             </div>
         </header>
-
-        <DialogContent>
-            <DialogHeader>
-            <DialogTitle>Choose Your Avatar</DialogTitle>
-            <DialogDescription>Select a new face for the Monarch.</DialogDescription>
-            </DialogHeader>
-            {isUpdatingAvatar ? (
-            <div className="flex items-center justify-center p-12">
-                <Loader2 className="size-8 animate-spin text-primary" />
-            </div>
-            ) : (
-            <div className="grid grid-cols-4 gap-4 py-4">
-                {jinwooAvatars.map((avatar) => (
-                <button
-                    key={avatar.id}
-                    className="relative rounded-full overflow-hidden border-2 border-transparent hover:border-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring"
-                    onClick={() => handleAvatarSelect(avatar.src, avatar.hint)}
-                >
-                    <SafeImage
-                        src={avatar.src}
-                        alt={`Avatar ${avatar.hint}`}
-                        width={128}
-                        height={128}
-                        className="aspect-square object-cover"
-                        data-ai-hint={avatar.hint}
-                        unopt={false}
-                    />
-                </button>
-                ))}
-            </div>
-            )}
-        </DialogContent>
-      </Dialog>
 
       <Tabs defaultValue="info">
         <TabsList className="grid w-full grid-cols-2">
@@ -411,3 +319,5 @@ function ProfilePage() {
 }
 
 export default withAuth(ProfilePage);
+
+    
