@@ -61,6 +61,7 @@ import {
   Loader2,
   X,
 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const entrySchema = z.object({
   title: z.string().min(1, 'Title is required'),
