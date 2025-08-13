@@ -196,7 +196,7 @@ function DashboardPage() {
     change?: number;
   }) => (
     <Card>
-      <CardHeader className="flex-row items-center justify-between">
+      <CardHeader>
         <CardTitle>{title}</CardTitle>
         {icon}
       </CardHeader>
@@ -227,8 +227,8 @@ function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-8 p-4 md:p-8">
-      <header className="flex items-center justify-between">
-        <div>
+      <header className="flex items-start justify-between gap-4">
+        <div className="flex-1">
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground break-words">
             {greeting}, {user?.displayName?.split(' ')[0] || user?.email}!
           </h1>
@@ -239,6 +239,7 @@ function DashboardPage() {
         <Button
           variant="ghost"
           size="icon"
+          className="flex-shrink-0"
           onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
         >
           <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
@@ -249,7 +250,7 @@ function DashboardPage() {
 
       {/* Gamification Section */}
        <Card>
-        <CardHeader className="flex-row items-center justify-between">
+        <CardHeader>
           <CardTitle>Your Progress</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -266,7 +267,7 @@ function DashboardPage() {
                   {profile.xp ?? 0} / {xpForNextLevel} XP
                 </span>
               </div>
-              <Progress value={currentLevelProgress} className="h-3 rounded-full" />
+              <Progress value={currentLevelProgress} className="h-3" />
             </div>
           )}
            <div>
@@ -342,14 +343,14 @@ function DashboardPage() {
             <Link href={feature.href} key={feature.title} className="flex">
                 <Card className="w-full transition-all hover:shadow-lg hover:scale-[1.02] dark:hover:border-primary/50">
                 <CardHeader className="flex-row items-start gap-4">
-                    <div className="mb-4 flex size-12 items-center justify-center rounded-lg bg-primary/10">
+                    <div className="flex size-12 items-center justify-center rounded-lg bg-primary/10">
                       {feature.icon}
                     </div>
-                    <CardTitle className="text-base font-bold text-foreground">{feature.title}</CardTitle>
+                    <div>
+                        <CardTitle className="text-base font-bold text-foreground">{feature.title}</CardTitle>
+                        <p className="text-sm text-muted-foreground mt-1">{feature.description}</p>
+                    </div>
                 </CardHeader>
-                <CardContent>
-                    <p className="text-sm text-muted-foreground">{feature.description}</p>
-                </CardContent>
                 </Card>
             </Link>
             ))}
@@ -360,5 +361,3 @@ function DashboardPage() {
 }
 
 export default withAuth(DashboardPage);
-
-    
