@@ -50,7 +50,7 @@ export type Habit = {
 }
 
 export type Reward = {
-    id: string;
+    id:string;
     name: string;
     description: string;
     type: 'title' | 'badge' | 'quote';
@@ -74,6 +74,8 @@ export type UserProfile = {
     level?: number;
     badges?: string[];
     habits?: Habit[];
+    questWeek?: number;
+    questDays?: number[];
 }
 
 export type DashboardStats = {
@@ -97,3 +99,5 @@ export type UnexpectedQuest = {
     isCompleted: boolean;
     generatedAt: Timestamp | any;
 }
+
+    

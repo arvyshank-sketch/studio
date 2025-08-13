@@ -43,8 +43,9 @@ import {
   serverTimestamp,
   runTransaction,
   getDoc,
+  updateDoc,
 } from 'firebase/firestore';
-import { eachDayOfInterval, format, subDays, differenceInCalendarDays } from 'date-fns';
+import { eachDayOfInterval, format, subDays, differenceInCalendarDays, getWeek, startOfWeek } from 'date-fns';
 import type { DashboardStats, WeightEntry, UserProfile, DailyLog, MealEntry, UnexpectedQuest, QuestExercise } from '@/lib/types';
 import { getLevel, getXpForLevel, badges as definedBadges, XP_REWARDS } from '@/lib/gamification';
 import { cn } from '@/lib/utils';
@@ -100,10 +101,28 @@ function DashboardPage() {
     setGreeting(getGreeting());
   }, []);
 
-  // Listener for user profile
+  // Listener for user profile and quest day randomization
   useEffect(() => {
     if (!user) return;
     const userDocRef = doc(db, 'users', user.uid);
+    
+    const setupQuestDays = async (userProfile: UserProfile) => {
+        const now = new Date();
+        const currentWeek = getWeek(now, { weekStartsOn: 1 }); // Monday as first day
+
+        if (userProfile.questWeek !== currentWeek) {
+            const randomDays = new Set<number>();
+            while (randomDays.size < 2) {
+                randomDays.add(Math.floor(Math.random() * 7)); // 0 (Sun) to 6 (Sat)
+            }
+            const questDays = Array.from(randomDays);
+            await updateDoc(userDocRef, {
+                questDays: questDays,
+                questWeek: currentWeek,
+            });
+        }
+    };
+    
     const unsubscribe = onSnapshot(userDocRef, (doc) => {
         if (doc.exists()) {
             const userProfile = doc.data() as UserProfile;
@@ -113,6 +132,7 @@ function DashboardPage() {
             }
             
             setProfile(userProfile);
+            setupQuestDays(userProfile); // Check and set quest days
             previousLevelRef.current = userProfile.level;
 
             if (userProfile.createdAt) {
@@ -128,16 +148,17 @@ function DashboardPage() {
 
   // Unexpected Quest generation and listener
   useEffect(() => {
-      if (!user || !profile?.createdAt) return;
+      if (!user || !profile || !profile.questDays) return;
+      
       const todayStr = format(new Date(), 'yyyy-MM-dd');
       const questDocRef = doc(db, 'users', user.uid, 'unexpectedQuests', todayStr);
 
       const generateQuest = async () => {
           const docSnap = await getDoc(questDocRef);
           if (!docSnap.exists()) {
-              // No quest for today, try to generate one based on a 2-day cycle
-              const daysSinceJoined = differenceInCalendarDays(new Date(), profile.createdAt.toDate());
-              if (daysSinceJoined % 2 === 0) { // Generate quest on even days
+              // No quest for today, check if today is a quest day
+              const todayDayOfWeek = new Date().getDay(); // 0 (Sun) - 6 (Sat)
+              if (profile.questDays?.includes(todayDayOfWeek)) {
                   const newQuest: UnexpectedQuest = {
                       id: todayStr,
                       title: 'Unexpected Quest',
@@ -660,5 +681,7 @@ function DashboardPage() {
 }
 
 export default withAuth(DashboardPage);
+
+    
 
     
