@@ -4,7 +4,7 @@ import { z } from 'genkit';
 
 export type WeightEntry = {
   id: string;
-  date: Timestamp;
+  date: Timestamp | Date;
   weight: number;
 };
 
@@ -40,6 +40,12 @@ export type ProgressEntry = {
   analysis: AnalyzePhysicalProgressOutput;
 };
 
+export type DashboardStats = {
+  weeklyWeightChange: number;
+  weeklyJournalEntries: number;
+  longestHabitStreak: number;
+};
+
 // Copied from src/ai/flows/analyze-physical-progress.ts to avoid circular dependency
 export type AnalyzePhysicalProgressOutput = {
     physiqueAssessment: string;
@@ -56,5 +62,5 @@ export type AnalyzePhysicalProgressOutput = {
     };
 };
 
-export const GenerateJournalPromptOutputSchema = z.string().describe("An insightful and concise journal prompt.");
+export const GenerateJournalPromptOutputSchema = z.string().describe("An insightful and concise journal prompt.").nullable();
 export type GenerateJournalPromptOutput = z.infer<typeof GenerateJournalPromptOutputSchema>;
