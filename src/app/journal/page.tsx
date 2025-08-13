@@ -51,12 +51,13 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import { HabitManager } from '@/components/habit-manager';
 
-const baseLogSchema = z.object({
+const logSchema = z.object({
   studyDuration: z.coerce.number().min(0).optional(),
   quranPagesRead: z.coerce.number().min(0).optional(),
   expenses: z.coerce.number().min(0, 'Must be a positive number').max(1000000, "Please enter a reasonable expense amount.").optional(),
   abstained: z.boolean().default(false),
   notes: z.string().optional(),
+  customHabits: z.record(z.boolean()).optional(),
 });
 
 
@@ -88,10 +89,16 @@ function DailyLogPage() {
   
   const today = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
   
-  const [logSchema, setLogSchema] = useState(baseLogSchema);
-  
   const form = useForm<z.infer<typeof logSchema>>({
     resolver: zodResolver(logSchema),
+    defaultValues: {
+        studyDuration: 0,
+        quranPagesRead: 0,
+        expenses: 0,
+        abstained: false,
+        notes: '',
+        customHabits: {},
+    }
   });
 
   const userDocRef = useMemo(() => {
@@ -115,37 +122,6 @@ function DailyLogPage() {
     return null;
   }, [user]);
   
-  // Dynamically update form schema and default values when habits change
-  useEffect(() => {
-    if (userProfile?.habits && userProfile.habits.length > 0) {
-        const habitFields = userProfile.habits.reduce((acc, habit) => {
-            acc[habit.id] = z.boolean().default(false);
-            return acc;
-        }, {} as Record<string, z.ZodBoolean>);
-        
-        const extendedSchema = baseLogSchema.extend({
-            customHabits: z.object(habitFields)
-        });
-        
-        setLogSchema(extendedSchema);
-        
-        const existingValues = form.getValues();
-        const defaultHabits = userProfile.habits.reduce((acc, habit) => {
-            acc[habit.id] = false;
-            return acc;
-        }, {} as Record<string, boolean>);
-
-        form.reset({
-            ...existingValues,
-            customHabits: {
-                ...defaultHabits,
-                ...existingValues.customHabits,
-            }
-        });
-    } else {
-        setLogSchema(baseLogSchema);
-    }
-  }, [userProfile, form]);
 
   const calculateStreak = useCallback(async () => {
     if (!logsCollectionRef) return 0;
@@ -199,7 +175,15 @@ function DailyLogPage() {
     // Set up real-time listener for user profile
     const unsubscribeProfile = onSnapshot(userDocRef, (doc) => {
         if (doc.exists()) {
-            setUserProfile(doc.data() as UserProfile);
+            const profileData = doc.data() as UserProfile;
+            setUserProfile(profileData);
+            // Ensure form has default values for new habits
+            const currentHabits = form.getValues('customHabits') || {};
+            const newHabits = profileData.habits?.reduce((acc, habit) => {
+                acc[habit.id] = currentHabits[habit.id] || false;
+                return acc;
+            }, {} as Record<string, boolean>) || {};
+            form.setValue('customHabits', newHabits);
         }
     }, (error) => {
          console.error('Error listening to profile updates:', error);
@@ -239,7 +223,7 @@ function DailyLogPage() {
     return () => {
         unsubscribeProfile();
     };
-  }, [docRef, userDocRef, toast, calculateStreak]);
+  }, [userDocRef, docRef, toast, calculateStreak, form]);
 
   const handleFormSubmit = async (data: z.infer<typeof logSchema>) => {
     if (!docRef || !userDocRef) return;
@@ -263,7 +247,9 @@ function DailyLogPage() {
         }
         const profile = userProfileSnap.data() as UserProfile;
 
-        const allLogsQuery = query(logsCollectionRef, orderBy('date', 'desc'));
+        // Note: The gamification logic needs *all* logs. For simplicity in this transaction,
+        // we'll fetch them here. For larger datasets, consider optimizing this.
+        const allLogsQuery = query(logsCollectionRef!, orderBy('date', 'desc'));
         const allLogsSnap = await getDocs(allLogsQuery);
         const allLogs = allLogsSnap.docs.map(doc => doc.data() as DailyLog);
 
@@ -417,11 +403,11 @@ function DailyLogPage() {
                                     </div>
                                     <div className="space-y-4">
                                         {userProfile?.habits && userProfile.habits.length > 0 ? (
-                                           userProfile.habits.map(habit => (
+                                           userProfile.habits.map((habit) => (
                                                 <FormField
                                                     key={habit.id}
                                                     control={form.control}
-                                                    name={`customHabits.${habit.id}` as any}
+                                                    name={`customHabits.${habit.id}`}
                                                     render={({ field }) => (
                                                     <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                                                         <div className="space-y-0.5">
