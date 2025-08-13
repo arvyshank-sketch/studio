@@ -30,7 +30,7 @@ import {
 import { auth, db } from '@/lib/firebase';
 import { useAuth } from '@/context/auth-context';
 import { useTheme } from '@/hooks/use-theme';
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   collection,
   query,
@@ -45,7 +45,7 @@ import {
   getDoc,
   updateDoc,
 } from 'firebase/firestore';
-import { eachDayOfInterval, format, subDays, differenceInCalendarDays, getWeek, startOfWeek } from 'date-fns';
+import { eachDayOfInterval, format, subDays, differenceInCalendarDays, getWeek } from 'date-fns';
 import type { DashboardStats, WeightEntry, UserProfile, DailyLog, MealEntry, UnexpectedQuest, QuestExercise } from '@/lib/types';
 import { getLevel, getXpForLevel, badges as definedBadges, XP_REWARDS } from '@/lib/gamification';
 import { cn } from '@/lib/utils';
@@ -61,7 +61,6 @@ import {
   Area,
 } from 'recharts';
 import { useRouter } from 'next/navigation';
-import { LevelUpModal } from '@/components/level-up-modal';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 
@@ -77,11 +76,8 @@ function DashboardPage() {
   const [chartData, setChartData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [challengeProgress, setChallengeProgress] = useState<{week: number; day: number} | null>(null);
-  const [isLevelUpModalOpen, setIsLevelUpModalOpen] = useState(false);
   const [unexpectedQuest, setUnexpectedQuest] = useState<UnexpectedQuest | null>(null);
   const [isQuestLoading, setIsQuestLoading] = useState(true);
-
-  const previousLevelRef = useRef<number | undefined>();
   
   const storageKey = user ? `${MEALS_STORAGE_KEY}-${user.uid}` : MEALS_STORAGE_KEY;
   const [allMeals] = useSyncedLocalStorage<MealEntry[]>(storageKey, []);
@@ -161,14 +157,8 @@ function DashboardPage() {
     const unsubscribe = onSnapshot(userDocRef, (doc) => {
         if (doc.exists()) {
             const userProfile = doc.data() as UserProfile;
-            
-            if (previousLevelRef.current !== undefined && userProfile.level !== undefined && userProfile.level > previousLevelRef.current) {
-                setIsLevelUpModalOpen(true);
-            }
-            
             setProfile(userProfile);
             setupQuestDays(userProfile); // Check and set quest days
-            previousLevelRef.current = userProfile.level;
 
             if (userProfile.createdAt) {
                 const totalDays = differenceInCalendarDays(new Date(), userProfile.createdAt.toDate()) + 1;
@@ -435,7 +425,6 @@ function DashboardPage() {
 
   return (
     <>
-    <LevelUpModal isOpen={isLevelUpModalOpen} onOpenChange={setIsLevelUpModalOpen} />
     <div className="flex flex-col gap-8 p-4 md:p-8">
       <header className="flex items-start justify-between gap-4">
         <div className="flex-1">
