@@ -101,6 +101,46 @@ function DashboardPage() {
     setGreeting(getGreeting());
   }, []);
 
+  // Reminder notification logic
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
+    if (!user) return;
+
+    const checkAndSendNotification = async () => {
+        const now = new Date();
+        const todayStr = format(now, 'yyyy-MM-dd');
+        const notificationKey = `synergy-notification-sent-${todayStr}`;
+
+        // Check if it's after 9 PM and if notification hasn't been sent today
+        if (now.getHours() >= 21 && !localStorage.getItem(notificationKey)) {
+            const dailyLogRef = doc(db, 'users', user.uid, 'dailyLogs', todayStr);
+            const dailyLogSnap = await getDoc(dailyLogRef);
+            
+            // Check if quest is already completed
+            const logData = dailyLogSnap.data() as DailyLog | undefined;
+            const questCompleted = logData && (
+                (logData.studyDuration ?? 0) > 0 ||
+                (logData.quranPagesRead ?? 0) > 0 ||
+                logData.abstained ||
+                Object.values(logData.customHabits ?? {}).some(Boolean)
+            );
+
+            if (!questCompleted) {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        new Notification('Synergy Daily Quest Reminder', {
+                            body: "Don't forget to complete your Daily Quest to avoid an XP penalty!",
+                            icon: '/favicon.ico', // Optional: add an icon
+                        });
+                        localStorage.setItem(notificationKey, 'true');
+                    }
+                });
+            }
+        }
+    };
+    checkAndSendNotification();
+  }, [user]);
+
   // Listener for user profile and quest day randomization
   useEffect(() => {
     if (!user) return;
