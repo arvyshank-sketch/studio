@@ -56,8 +56,6 @@ import {
   Area,
 } from 'recharts';
 import { useRouter } from 'next/navigation';
-import { HabitManager } from '@/components/habit-manager';
-
 
 function DashboardPage() {
   const { user } = useAuth();
@@ -69,7 +67,6 @@ function DashboardPage() {
   const [chartData, setChartData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [challengeProgress, setChallengeProgress] = useState<{week: number; day: number} | null>(null);
-  const [isHabitManagerOpen, setIsHabitManagerOpen] = useState(false);
   
   const storageKey = user ? `${MEALS_STORAGE_KEY}-${user.uid}` : MEALS_STORAGE_KEY;
   const [allMeals] = useSyncedLocalStorage<MealEntry[]>(storageKey, []);
@@ -508,42 +505,6 @@ function DashboardPage() {
                     </div>
                 </div>
             </CardContent>
-        </Card>
-       )}
-       {profile && (
-        <Card>
-            <CardHeader>
-                 <div className="flex items-center justify-between">
-                    <CardTitle>Custom Habits</CardTitle>
-                    <Button variant="ghost" size="icon" onClick={() => setIsHabitManagerOpen(true)}>
-                        <PlusCircle className="size-5" />
-                        <span className="sr-only">Add or manage habits</span>
-                    </Button>
-                </div>
-                <CardDescription>
-                    Add and track your own daily habits.
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                {isLoading ? (
-                    <Skeleton className="h-10 w-full" />
-                ) : profile.habits && profile.habits.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                        {profile.habits.map(habit => (
-                            <div key={habit.id} className="flex items-center gap-2 rounded-full border border-border bg-muted/50 px-3 py-1 text-sm">
-                                {habit.name}
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <p className="text-sm text-muted-foreground">No custom habits added yet. Click the '+' to add your first one!</p>
-                )}
-            </CardContent>
-             <HabitManager
-                isOpen={isHabitManagerOpen}
-                setIsOpen={setIsHabitManagerOpen}
-                profile={profile}
-             />
         </Card>
        )}
     </div>

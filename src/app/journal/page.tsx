@@ -44,10 +44,11 @@ import { Input }from '@/components/ui/input';
 import { Textarea }from '@/components/ui/textarea';
 import { useToast }from '@/hooks/use-toast';
 import { Switch }from '@/components/ui/switch';
-import { Loader2, BookOpen, Brain, DollarSign, HeartHandshake, CheckCircle, Flame, Repeat }from 'lucide-react';
+import { Loader2, BookOpen, Brain, DollarSign, HeartHandshake, CheckCircle, Flame, Repeat, PlusCircle }from 'lucide-react';
 import { Skeleton }from '@/components/ui/skeleton';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
+import { HabitManager } from '@/components/habit-manager';
 
 const baseLogSchema = z.object({
   studyDuration: z.coerce.number().min(0).optional(),
@@ -81,7 +82,9 @@ function DailyLogPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [streak, setStreak] = useState(0);
-  const [userHabits, setUserHabits] = useState<Habit[]>([]);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isHabitManagerOpen, setIsHabitManagerOpen] = useState(false);
+  
   const today = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
   
   const [logSchema, setLogSchema] = useState(baseLogSchema);
@@ -113,8 +116,8 @@ function DailyLogPage() {
   
   // Update schema when habits change
   useEffect(() => {
-    if (userHabits.length > 0) {
-        const habitFields = userHabits.reduce((acc, habit) => {
+    if (userProfile?.habits && userProfile.habits.length > 0) {
+        const habitFields = userProfile.habits.reduce((acc, habit) => {
             acc[habit.id] = z.boolean().default(false);
             return acc;
         }, {} as Record<string, z.ZodBoolean>);
@@ -130,7 +133,7 @@ function DailyLogPage() {
     } else {
         setLogSchema(baseLogSchema);
     }
-  }, [userHabits, form]);
+  }, [userProfile, form]);
 
   const calculateStreak = useCallback(async () => {
     if (!logsCollectionRef) return 0;
@@ -186,7 +189,7 @@ function DailyLogPage() {
         const userProfileSnap = await getDoc(userDocRef);
         if (userProfileSnap.exists()) {
             const profile = userProfileSnap.data() as UserProfile;
-            setUserHabits(profile.habits || []);
+            setUserProfile(profile);
         }
 
         const docSnap = await getDoc(docRef);
@@ -202,9 +205,11 @@ function DailyLogPage() {
                 notes: '',
                 customHabits: {},
             };
-            (userHabits || []).forEach(habit => {
+            if (userProfile?.habits) {
+              userProfile.habits.forEach(habit => {
                 defaultValues.customHabits[habit.id] = false;
-            });
+              });
+            }
             form.reset(defaultValues);
         }
 
@@ -245,7 +250,7 @@ function DailyLogPage() {
         if (!userProfileSnap.exists()) {
           throw new Error("User profile not found!");
         }
-        const userProfile = userProfileSnap.data() as UserProfile;
+        const profile = userProfileSnap.data() as UserProfile;
 
         const allLogsQuery = query(logsCollectionRef, orderBy('date', 'desc'));
         const allLogsSnap = await getDocs(allLogsQuery);
@@ -255,7 +260,7 @@ function DailyLogPage() {
         transaction.set(docRef, logData, { merge: true });
 
         // 3. Process gamification
-        const updatedProfile = processGamification(userProfile, allLogs, logData);
+        const updatedProfile = processGamification(profile, allLogs, logData);
 
         // 4. Update the user profile with new XP, level, and badges
         transaction.update(userDocRef, updatedProfile);
@@ -393,12 +398,18 @@ function DailyLogPage() {
                                     />
                                 </div>
                                 
-                                {userHabits.length > 0 && (
+                                {userProfile && userProfile.habits && userProfile.habits.length > 0 && (
                                     <div>
                                         <Separator className="my-6"/>
                                         <div className="space-y-4">
-                                            <h3 className="text-lg font-medium flex items-center gap-2"><Repeat /> Custom Habits</h3>
-                                            {userHabits.map(habit => (
+                                             <div className="flex items-center justify-between">
+                                                <h3 className="text-lg font-medium flex items-center gap-2"><Repeat /> Custom Habits</h3>
+                                                <Button variant="ghost" size="icon" onClick={() => setIsHabitManagerOpen(true)}>
+                                                    <PlusCircle className="size-5" />
+                                                    <span className="sr-only">Add or manage habits</span>
+                                                </Button>
+                                            </div>
+                                            {userProfile.habits.map(habit => (
                                                 <FormField
                                                     key={habit.id}
                                                     control={form.control}
@@ -460,6 +471,11 @@ function DailyLogPage() {
              </Card>
         </div>
       </div>
+      <HabitManager
+          isOpen={isHabitManagerOpen}
+          setIsOpen={setIsHabitManagerOpen}
+          profile={userProfile}
+      />
     </div>
   );
 }
