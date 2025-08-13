@@ -8,11 +8,13 @@ const BASE_XP = 100;
 const GROWTH_FACTOR = 1.2;
 
 export const XP_REWARDS = {
-  STUDY: 10,
-  QURAN: 10,
+  STUDY_PER_30_MIN: 5,         // 5 XP per 30 minutes
+  QURAN_PER_PAGE: 1,           // 1 XP per page
   EXPENSE_LOGGED: 5,
   ABSTAINED: 20,
   CUSTOM_HABIT: 15,
+  CALORIE_LOGGED: 10,          // XP for logging any meal for the day
+  WEIGHT_GAIN: 100,            // XP for any increase in weight
 };
 
 /**
@@ -22,7 +24,8 @@ export const XP_REWARDS = {
  */
 export const getXpForLevel = (level: number): number => {
   if (level <= 1) return 0;
-  return Math.floor(BASE_XP * Math.pow(level - 1, GROWTH_FACTOR));
+  // Each next level requires more XP, creating a steeper curve.
+  return Math.floor(BASE_XP * Math.pow(level - 1, GROWTH_FACTOR + (level * 0.01) ));
 };
 
 /**
@@ -135,13 +138,22 @@ const badgeChecks: { [key: string]: (ctx: BadgeCheckContext) => boolean } = {
  * @param newLog The new log being submitted.
  * @returns An updated user profile object.
  */
-export const processGamification = (userProfile: UserProfile, allLogs: DailyLog[], newLog: DailyLog): Partial<UserProfile> => {
+export const processGamification = (userProfile: UserProfile, allLogs: DailyLog[], newLog: Partial<DailyLog>, customXp?: number): Partial<UserProfile> => {
   // --- 1. Calculate XP for the new log ---
-  let earnedXp = 0;
-  if (newLog.studyDuration > 0) earnedXp += XP_REWARDS.STUDY;
-  if (newLog.quranPagesRead > 0) earnedXp += XP_REWARDS.QURAN;
-  if (newLog.expenses > 0) earnedXp += XP_REWARDS.EXPENSE_LOGGED;
+  let earnedXp = customXp || 0;
+
+  // Proportional XP for studying
+  if (newLog.studyDuration && newLog.studyDuration > 0) {
+    earnedXp += (newLog.studyDuration / 0.5) * XP_REWARDS.STUDY_PER_30_MIN;
+  }
+  // Proportional XP for Quran reading
+  if (newLog.quranPagesRead && newLog.quranPagesRead > 0) {
+    earnedXp += newLog.quranPagesRead * XP_REWARDS.QURAN_PER_PAGE;
+  }
+
+  if (newLog.expenses && newLog.expenses > 0) earnedXp += XP_REWARDS.EXPENSE_LOGGED;
   if (newLog.abstained) earnedXp += XP_REWARDS.ABSTAINED;
+  if (newLog.caloriesLogged) earnedXp += XP_REWARDS.CALORIE_LOGGED;
 
   // Add XP for custom habits
   if (newLog.customHabits) {
@@ -155,20 +167,23 @@ export const processGamification = (userProfile: UserProfile, allLogs: DailyLog[
 
   // --- 2. Check for new badges ---
   const currentBadges = new Set(userProfile.badges ?? []);
-  const badgeCheckContext: BadgeCheckContext = {
-    userProfile,
-    allLogs: [...allLogs, newLog], // Ensure the new log is part of the context
-    newLog,
-  };
-  
-  for (const badge of badges) {
-    if (!currentBadges.has(badge.id)) {
-      const check = badgeChecks[badge.id];
-      if (check && check(badgeCheckContext)) {
-        currentBadges.add(badge.id);
+  if (newLog.date) {
+    const badgeCheckContext: BadgeCheckContext = {
+      userProfile,
+      allLogs: [...allLogs, newLog as DailyLog], // Ensure the new log is part of the context
+      newLog: newLog as DailyLog,
+    };
+    
+    for (const badge of badges) {
+      if (!currentBadges.has(badge.id)) {
+        const check = badgeChecks[badge.id];
+        if (check && check(badgeCheckContext)) {
+          currentBadges.add(badge.id);
+        }
       }
     }
   }
+
 
   // --- 3. Return updated profile data ---
   const updatedProfile: Partial<UserProfile> = {

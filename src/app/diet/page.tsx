@@ -1,3 +1,4 @@
+
 'use client';
 
 import withAuth from "@/components/with-auth";
@@ -31,12 +32,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { MealEntry } from '@/lib/types';
-import { UtensilsCrossed, Trash2 } from 'lucide-react';
+import type { DailyLog, MealEntry, UserProfile } from '@/lib/types';
+import { UtensilsCrossed, Trash2, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { MEALS_STORAGE_KEY } from '@/lib/constants';
 import { useSyncedLocalStorage } from '@/hooks/use-synced-local-storage';
 import { useAuth } from "@/context/auth-context";
+import { runTransaction, doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { processGamification, XP_REWARDS } from "@/lib/gamification";
+import { useToast } from "@/hooks/use-toast";
 
 const mealSchema = z.object({
   name: z.string().min(1, 'Meal name is required'),
@@ -47,6 +52,7 @@ type MealFormValues = z.infer<typeof mealSchema>;
 
 function DietPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const storageKey = user ? `${MEALS_STORAGE_KEY}-${user.uid}` : MEALS_STORAGE_KEY;
   const [allMeals, setAllMeals] = useSyncedLocalStorage<MealEntry[]>(storageKey, []);
   
@@ -61,10 +67,47 @@ function DietPage() {
     return allMeals.filter(meal => meal.date === today);
   }, [allMeals, today]);
 
-  const onSubmit: SubmitHandler<MealFormValues> = (data) => {
+  const onSubmit: SubmitHandler<MealFormValues> = async (data) => {
+    const isFirstLogToday = todaysMeals.length === 0;
+
     const newMeal: MealEntry = { ...data, id: Date.now(), date: today };
     setAllMeals((prev) => [...prev, newMeal]);
     form.reset();
+
+    // If it's the first meal logged today, award XP
+    if (isFirstLogToday && user) {
+        try {
+            const userDocRef = doc(db, 'users', user.uid);
+            const dailyLogRef = doc(db, 'users', user.uid, 'dailyLogs', today);
+
+            await runTransaction(db, async (transaction) => {
+                const userProfileSnap = await transaction.get(userDocRef);
+                const dailyLogSnap = await transaction.get(dailyLogRef);
+
+                if (!userProfileSnap.exists()) {
+                    throw new Error("User profile not found!");
+                }
+                const profile = userProfileSnap.data() as UserProfile;
+                const dailyLog = (dailyLogSnap.exists() ? dailyLogSnap.data() : {}) as Partial<DailyLog>;
+
+                // Avoid giving XP twice if the log was already marked
+                if (dailyLog.caloriesLogged) return;
+
+                const updatedProfile = processGamification(profile, [], { caloriesLogged: true });
+
+                transaction.update(userDocRef, updatedProfile);
+                transaction.set(dailyLogRef, { caloriesLogged: true, date: today }, { merge: true });
+            });
+            toast({
+                title: `+${XP_REWARDS.CALORIE_LOGGED} XP!`,
+                description: "You've earned points for logging your meal.",
+                action: <div className="p-2 bg-green-500 text-white rounded-full"><CheckCircle size={24} /></div>,
+            });
+        } catch(e) {
+            console.error("Failed to award XP for calorie logging", e);
+            toast({ variant: 'destructive', title: "Error", description: "Couldn't award XP for your meal log."})
+        }
+    }
   };
 
   const deleteMeal = useCallback((id: number) => {

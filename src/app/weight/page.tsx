@@ -22,6 +22,8 @@ import {
   getDocs,
   getDoc,
   setDoc,
+  runTransaction,
+  limit,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/context/auth-context';
@@ -45,7 +47,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import type { WeightEntry, UserProfile } from '@/lib/types';
+import type { WeightEntry, UserProfile, DailyLog } from '@/lib/types';
 import {
   AreaChart,
   Area,
@@ -55,7 +57,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { TrendingUp, Trash2, Weight as WeightIcon, Ruler, Loader2 } from 'lucide-react';
+import { TrendingUp, Trash2, Weight as WeightIcon, Ruler, Loader2, CheckCircle } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -67,6 +69,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Badge } from "@/components/ui/badge";
+import { processGamification, XP_REWARDS } from "@/lib/gamification";
 
 const weightSchema = z.object({
   weight: z.coerce.number().positive('Weight must be a positive number'),
@@ -159,7 +162,7 @@ function WeightPage() {
 
 
   const handleWeightSubmit: SubmitHandler<WeightFormValues> = async (data) => {
-    if (!weightCollectionRef) return;
+    if (!weightCollectionRef || !userDocRef) return;
     setIsSubmitting(true);
     
     const today = new Date();
@@ -169,6 +172,10 @@ function WeightPage() {
     try {
         const q = query(weightCollectionRef, where('date', '>=', todayStart), where('date', '<=', todayEnd));
         const querySnapshot = await getDocs(q);
+
+        const latestWeightQuery = query(weightCollectionRef, orderBy('date', 'desc'), limit(1));
+        const latestWeightSnap = await getDocs(latestWeightQuery);
+        const previousWeight = latestWeightSnap.docs[0]?.data().weight;
 
         if (!querySnapshot.empty) {
             // Update today's entry
@@ -180,6 +187,25 @@ function WeightPage() {
             await addDoc(weightCollectionRef, { weight: data.weight, date: serverTimestamp() });
             toast({ title: 'Success', description: 'Weight logged successfully.' });
         }
+
+        // Award XP for weight gain
+        if (previousWeight && data.weight > previousWeight) {
+             await runTransaction(db, async (transaction) => {
+                const userProfileSnap = await transaction.get(userDocRef);
+                 if (!userProfileSnap.exists()) {
+                    throw new Error("User profile not found!");
+                }
+                const currentProfile = userProfileSnap.data() as UserProfile;
+                const updatedProfile = processGamification(currentProfile, [], {}, XP_REWARDS.WEIGHT_GAIN);
+                transaction.update(userDocRef, updatedProfile);
+             });
+             toast({
+                title: `+${XP_REWARDS.WEIGHT_GAIN} XP!`,
+                description: 'Awesome! Rewarded for weight gain.',
+                action: <div className="p-2 bg-green-500 text-white rounded-full"><CheckCircle size={24} /></div>,
+            });
+        }
+
         weightForm.reset({ weight: undefined });
     } catch(error) {
         console.error('Error saving weight entry:', error);
@@ -460,5 +486,3 @@ function WeightPage() {
 }
 
 export default withAuth(WeightPage);
-
-    

@@ -23,6 +23,7 @@ export type DailyLog = {
     abstained: boolean;
     notes?: string;
     customHabits?: Record<string, boolean>;
+    caloriesLogged?: boolean;
 }
 
 export type JournalEntry = {
