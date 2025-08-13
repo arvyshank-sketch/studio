@@ -35,26 +35,28 @@ export const AuthContextProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const handleUser = async (user: User) => {
-      // Check for and create user document in Firestore in the background
       const userDocRef = doc(db, 'users', user.uid);
       const userDocSnap = await getDoc(userDocRef);
 
       if (!userDocSnap.exists()) {
         const newDisplayName = user.displayName || generateUsername(user.email!);
+        const photoURL = user.photoURL || `https://placehold.co/128x128.png`;
         try {
-          if (!user.displayName) {
-            await updateProfile(user, { displayName: newDisplayName });
+          // We only update the profile if it's missing a display name or photo
+          if (!user.displayName || !user.photoURL) {
+            await updateProfile(user, { displayName: newDisplayName, photoURL: photoURL });
           }
           await setDoc(userDocRef, {
             uid: user.uid,
             email: user.email,
             displayName: newDisplayName,
-            photoURL: user.photoURL,
+            photoURL: photoURL,
             createdAt: serverTimestamp(),
             level: 1,
             xp: 0,
             badges: [],
           });
+          // After creating the profile, reload the user object to get the latest data
           await user.reload();
           setUser(auth.currentUser); // Update state with reloaded user
         } catch (error) {
@@ -64,10 +66,14 @@ export const AuthContextProvider = ({ children }: { children: ReactNode }) => {
     };
     
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
       if (currentUser) {
-        handleUser(currentUser);
+        handleUser(currentUser).finally(() => {
+          setUser(currentUser);
+          setLoading(false);
+        });
+      } else {
+        setUser(null);
+        setLoading(false);
       }
     });
 
@@ -84,11 +90,12 @@ export const AuthContextProvider = ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading: loading }}>
-      {!loading && children}
+    <AuthContext.Provider value={{ user, loading }}>
+      {children}
     </AuthContext.Provider>
   );
 };
+
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -97,3 +104,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    
