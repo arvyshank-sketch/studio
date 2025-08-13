@@ -147,13 +147,15 @@ function ProfilePage() {
                 <Skeleton className="size-20 rounded-full" />
             ) : (
                 <Avatar className="size-20 border-2 border-primary overflow-hidden">
-                    <SafeImage
-                        src={profile?.photoURL}
-                        alt={profile?.displayName ?? "User Avatar"}
-                        width={80}
-                        height={80}
-                        className="h-20 w-20 object-cover"
-                    />
+                     <SafeImage
+                         src={profile?.photoURL}
+                         alt={profile?.displayName ?? "User Avatar"}
+                         width={80}
+                         height={80}
+                         className="h-20 w-20 object-cover"
+                         fallbackSrc="https://i.pinimg.com/736x/a4/b4/3c/a4b43ce5f8b6f3d1b7a3e74e47190dce.jpg"
+                         data-ai-hint="sung jin woo cool"
+                     />
                     <AvatarFallback className="text-2xl bg-muted">
                         {profile?.displayName?.charAt(0)?.toUpperCase() || "?"}
                     </AvatarFallback>
@@ -215,16 +217,16 @@ function ProfilePage() {
                  <Label className="flex items-center gap-2 text-base"><Brush /> System Theme</Label>
                   <RadioGroup
                     value={theme}
-                    onValueChange={setTheme}
+                    onValueChange={(value) => setTheme(value === 'system' ? 'system' : 'classic')}
                     className="flex flex-col space-y-1"
                   >
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="light" id="light" />
-                      <Label htmlFor="light">Classic</Label>
+                      <RadioGroupItem value="system" id="system" />
+                      <Label htmlFor="system">Solo Leveling System</Label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="dark" id="dark" />
-                      <Label htmlFor="dark">Solo Leveling System</Label>
+                      <RadioGroupItem value="classic" id="classic" />
+                      <Label htmlFor="classic">Classic</Label>
                     </div>
                   </RadioGroup>
                </div>

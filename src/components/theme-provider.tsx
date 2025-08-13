@@ -9,7 +9,7 @@ import { type ThemeProviderProps } from 'next-themes/dist/types';
 
 type CustomThemeContextProps = {
   theme?: string;
-  setTheme: (theme: string) => void;
+  setTheme: (theme: 'system' | 'classic') => void;
 };
 
 export const ThemeProviderContext = React.createContext<
@@ -26,7 +26,7 @@ function ThemeProviderWrapper({ children }: { children: React.ReactNode }) {
       setTheme,
     }),
     [theme, setTheme]
-  );
+  ) as CustomThemeContextProps;
 
   return (
     <ThemeProviderContext.Provider value={value}>

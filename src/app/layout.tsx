@@ -29,8 +29,7 @@ export default function RootLayout({
       <body className="h-full font-body antialiased bg-background">
         <ThemeProvider
             attribute="class"
-            defaultTheme="dark"
-            enableSystem
+            defaultTheme="system"
             disableTransitionOnChange
         >
           <AuthContextProvider>
