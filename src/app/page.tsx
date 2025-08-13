@@ -1,4 +1,3 @@
-
 'use client';
 
 import withAuth from '@/components/with-auth';
@@ -23,6 +22,7 @@ import {
   Loader2,
   Book,
   Utensils,
+  IndianRupee,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { useTheme } from '@/hooks/use-theme';
@@ -162,6 +162,7 @@ function DashboardPage() {
           date: format(date, 'MMM d'),
           study: logForDay?.studyDuration || 0,
           quran: logForDay?.quranPagesRead || 0,
+          expenses: logForDay?.expenses || 0,
           calories: totalCalories,
         };
       });
@@ -239,13 +240,13 @@ function DashboardPage() {
     </Card>
   );
   
-  const CustomTooltip = ({ active, payload, label, unit = '' }: any) => {
+  const CustomTooltip = ({ active, payload, label, unit = '', prefix = '' }: any) => {
     if (active && payload && payload.length) {
       return (
         <div className="p-2 bg-card border border-border rounded-lg shadow-lg">
           <p className="label font-bold text-foreground">{`${label}`}</p>
           <p className="intro" style={{ color: payload[0].stroke || payload[0].fill }}>
-            {`${payload[0].name}: ${payload[0].value.toLocaleString()}${unit}`}
+            {`${payload[0].name}: ${prefix}${payload[0].value.toLocaleString()}${unit}`}
           </p>
         </div>
       );
@@ -381,7 +382,7 @@ function DashboardPage() {
                     <CardDescription>Daily calorie intake for the last 7 days.</CardDescription>
                 </CardHeader>
                 <CardContent className="h-[300px] w-full pr-4">
-                    {isLoading ? ( <Loader2 className="size-8 animate-spin text-primary mx-auto" /> ) : chartData.length > 0 ? (
+                    {isLoading ? ( <Loader2 className="size-8 animate-spin text-primary mx-auto" /> ) : chartData.some(d => d.calories > 0) ? (
                     <ResponsiveContainer width="100%" height="100%">
                         <RechartsBarChart data={chartData}>
                             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" />
@@ -396,30 +397,68 @@ function DashboardPage() {
             </Card>
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Book /> Study & Quran</CardTitle>
-                    <CardDescription>Daily progress for the last 7 days.</CardDescription>
+                    <CardTitle className="flex items-center gap-2"><IndianRupee /> Weekly Expenses</CardTitle>
+                    <CardDescription>Daily expenses for the last 7 days.</CardDescription>
+                </CardHeader>
+                <CardContent className="h-[300px] w-full pr-4">
+                    {isLoading ? ( <Loader2 className="size-8 animate-spin text-primary mx-auto" /> ) : chartData.some(d => d.expenses > 0) ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                        <RechartsBarChart data={chartData}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" />
+                            <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                            <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                            <Tooltip content={<CustomTooltip prefix="₹" />} />
+                            <Bar dataKey="expenses" name="Expenses" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} />
+                        </RechartsBarChart>
+                    </ResponsiveContainer>
+                    ) : ( <ChartPlaceholder /> )}
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Book /> Study Progress</CardTitle>
+                    <CardDescription>Daily study progress for the last 7 days.</CardDescription>
                 </CardHeader>
                  <CardContent className="h-[300px] w-full pr-4">
-                    {isLoading ? ( <Loader2 className="size-8 animate-spin text-primary mx-auto" /> ) : chartData.length > 0 ? (
+                    {isLoading ? ( <Loader2 className="size-8 animate-spin text-primary mx-auto" /> ) : chartData.some(d => d.study > 0) ? (
                     <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={chartData}>
                             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" />
                             <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                             <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                            <Tooltip content={<CustomTooltip />} />
-                            <Legend wrapperStyle={{fontSize: "12px"}} />
+                            <Tooltip content={<CustomTooltip unit=" hrs" />} />
                             <defs>
                                 <linearGradient id="colorStudy" x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.8}/>
                                     <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0}/>
                                 </linearGradient>
+                            </defs>
+                            <Area type="monotone" dataKey="study" name="Study" stroke="hsl(var(--chart-2))" fill="url(#colorStudy)" />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                    ) : ( <ChartPlaceholder /> )}
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Book /> Quran Progress</CardTitle>
+                    <CardDescription>Daily quran progress for the last 7 days.</CardDescription>
+                </CardHeader>
+                 <CardContent className="h-[300px] w-full pr-4">
+                    {isLoading ? ( <Loader2 className="size-8 animate-spin text-primary mx-auto" /> ) : chartData.some(d => d.quran > 0) ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={chartData}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" />
+                            <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                            <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                            <Tooltip content={<CustomTooltip unit=" pgs"/>} />
+                            <defs>
                                 <linearGradient id="colorQuran" x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="5%" stopColor="hsl(var(--chart-4))" stopOpacity={0.8}/>
                                     <stop offset="95%" stopColor="hsl(var(--chart-4))" stopOpacity={0}/>
                                 </linearGradient>
                             </defs>
-                            <Area type="monotone" dataKey="study" name="Study (hrs)" stroke="hsl(var(--chart-2))" fill="url(#colorStudy)" />
-                            <Area type="monotone" dataKey="quran" name="Quran (pgs)" stroke="hsl(var(--chart-4))" fill="url(#colorQuran)" />
+                            <Area type="monotone" dataKey="quran" name="Quran" stroke="hsl(var(--chart-4))" fill="url(#colorQuran)" />
                         </AreaChart>
                     </ResponsiveContainer>
                     ) : ( <ChartPlaceholder /> )}
@@ -431,5 +470,3 @@ function DashboardPage() {
 }
 
 export default withAuth(DashboardPage);
-
-    
