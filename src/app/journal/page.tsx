@@ -42,7 +42,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, BookOpen, Brain, DollarSign, HeartHand, CheckCircle, Flame } from 'lucide-react';
+import { Loader2, BookOpen, Brain, DollarSign, HeartHandshake, CheckCircle, Flame } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const logSchema = z.object({
@@ -270,7 +270,7 @@ function DailyLogPage() {
                                         render={({ field }) => (
                                         <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                                             <div className="space-y-0.5">
-                                                <FormLabel className="text-base flex items-center gap-2"><HeartHand /> Abstinence</FormLabel>
+                                                <FormLabel className="text-base flex items-center gap-2"><HeartHandshake /> Abstinence</FormLabel>
                                                 <FormDescription>Did you abstain from masturbation?</FormDescription>
                                             </div>
                                             <FormControl>
