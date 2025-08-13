@@ -475,7 +475,7 @@ function DashboardPage() {
                                 htmlFor={`ex-${ex.name}`}
                                 className={cn("text-sm font-medium leading-none", unexpectedQuest.isCompleted || ex.completed ? 'line-through text-muted-foreground' : '')}
                             >
-                                {ex.goal} {ex.name}{ex.name !== 'Running' && 's'} {ex.name === 'Running' && 'km'}
+                                {ex.goal} {ex.name} {ex.name === 'Running' && 'km'}
                             </label>
                         </div>
                     ))}
