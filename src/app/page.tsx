@@ -20,6 +20,7 @@ import {
   Moon,
   Sun,
   BarChart,
+  Loader2,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { useTheme } from '@/hooks/use-theme';
