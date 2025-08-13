@@ -68,14 +68,14 @@ const getRewardIcon = (type: string) => {
 }
 
 const jinwooAvatars = [
-    { id: '1', src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', hint: 'sung jin woo cool'},
-    { id: '2', src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', hint: 'sung jin woo monarch'},
-    { id: '3', src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', hint: 'sung jin woo dagger'},
-    { id: '4', src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', hint: 'sung jin woo glowing'},
-    { id: '5', src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', hint: 'sung jin woo shadow'},
-    { id: '6', src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', hint: 'sung jin woo smile'},
-    { id: '7', src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', hint: 'sung jin woo fighting'},
-    { id: '8', src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', hint: 'sung jin woo portrait'},
+    { id: '1', src: 'https://placehold.co/128x128.png', hint: 'sung jin woo cool'},
+    { id: '2', src: 'https://placehold.co/128x128.png', hint: 'sung jin woo monarch'},
+    { id: '3', src: 'https://placehold.co/128x128.png', hint: 'sung jin woo dagger'},
+    { id: '4', src: 'https://placehold.co/128x128.png', hint: 'sung jin woo glowing'},
+    { id: '5', src: 'https://placehold.co/128x128.png', hint: 'sung jin woo shadow'},
+    { id: '6', src: 'https://placehold.co/128x128.png', hint: 'sung jin woo smile'},
+    { id: '7', src: 'https://placehold.co/128x128.png', hint: 'sung jin woo fighting'},
+    { id: '8', src: 'https://placehold.co/128x128.png', hint: 'sung jin woo portrait'},
 ];
 
 
@@ -133,15 +133,24 @@ function ProfilePage() {
     router.push('/login');
   };
 
-  const handleAvatarSelect = async (avatarUrl: string) => {
+  const handleAvatarSelect = async (avatarUrl: string, hint: string) => {
     if (!user) return;
     setIsUpdatingAvatar(true);
+
+    // Note: The actual image replacement based on `data-ai-hint` happens outside this component's logic.
+    // We just need to pass a valid placeholder URL to Firebase.
+    const finalUrl = `https://placehold.co/128x128.png?text=${hint.replace(/\s/g, '+')}`;
+
     try {
         // Update Firebase Auth profile
-        await updateProfile(user, { photoURL: avatarUrl });
+        await updateProfile(user, { photoURL: finalUrl });
         // Update Firestore document
         const userDocRef = doc(db, 'users', user.uid);
-        await updateDoc(userDocRef, { photoURL: avatarUrl });
+        await updateDoc(userDocRef, { photoURL: finalUrl });
+
+        // Manually update local state to reflect change immediately
+        setProfile(prev => prev ? { ...prev, photoURL: finalUrl } : null);
+
         toast({ title: "Avatar updated!", description: "Your new look is ready."});
         setIsAvatarDialogOpen(false);
     } catch (error) {
@@ -232,15 +241,15 @@ function ProfilePage() {
                         <button
                             key={avatar.id}
                             className="relative rounded-full overflow-hidden border-2 border-transparent hover:border-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring"
-                            onClick={() => handleAvatarSelect(avatar.src)}
-                            data-ai-hint={avatar.hint}
+                            onClick={() => handleAvatarSelect(avatar.src, avatar.hint)}
                         >
                             <Image
                                 src={avatar.src}
-                                alt={`Avatar ${avatar.id}`}
+                                alt={`Avatar ${avatar.hint}`}
                                 width={128}
                                 height={128}
                                 className="aspect-square object-cover"
+                                data-ai-hint={avatar.hint}
                             />
                         </button>
                     ))}
