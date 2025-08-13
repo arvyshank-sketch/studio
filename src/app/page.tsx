@@ -384,13 +384,19 @@ function DashboardPage() {
                 <CardContent className="h-[300px] w-full pr-4">
                     {isLoading ? ( <Loader2 className="size-8 animate-spin text-primary mx-auto" /> ) : chartData.some(d => d.calories > 0) ? (
                     <ResponsiveContainer width="100%" height="100%">
-                        <RechartsBarChart data={chartData}>
+                        <AreaChart data={chartData}>
+                            <defs>
+                                <linearGradient id="colorCalories" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
+                                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                                </linearGradient>
+                            </defs>
                             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" />
                             <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                             <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
                             <Tooltip content={<CustomTooltip unit=" kcal" />} />
-                            <Bar dataKey="calories" name="Calories" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                        </RechartsBarChart>
+                            <Area type="monotone" dataKey="calories" name="Calories" stroke="hsl(var(--primary))" fill="url(#colorCalories)" />
+                        </AreaChart>
                     </ResponsiveContainer>
                     ) : ( <ChartPlaceholder /> )}
                 </CardContent>
@@ -403,13 +409,19 @@ function DashboardPage() {
                 <CardContent className="h-[300px] w-full pr-4">
                     {isLoading ? ( <Loader2 className="size-8 animate-spin text-primary mx-auto" /> ) : chartData.some(d => d.expenses > 0) ? (
                     <ResponsiveContainer width="100%" height="100%">
-                        <RechartsBarChart data={chartData}>
+                        <AreaChart data={chartData}>
+                           <defs>
+                                <linearGradient id="colorExpenses" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="hsl(var(--accent))" stopOpacity={0.8}/>
+                                    <stop offset="95%" stopColor="hsl(var(--accent))" stopOpacity={0}/>
+                                </linearGradient>
+                            </defs>
                             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" />
                             <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                             <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
                             <Tooltip content={<CustomTooltip prefix="₹" />} />
-                            <Bar dataKey="expenses" name="Expenses" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} />
-                        </RechartsBarChart>
+                            <Area type="monotone" dataKey="expenses" name="Expenses" stroke="hsl(var(--accent))" fill="url(#colorExpenses)" />
+                        </AreaChart>
                     </ResponsiveContainer>
                     ) : ( <ChartPlaceholder /> )}
                 </CardContent>
