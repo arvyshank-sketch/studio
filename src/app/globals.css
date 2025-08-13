@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 @layer base {
+  /* Classic Light Theme */
   :root {
     --background: 210 17% 95%; /* Light Blue-Gray */
     --foreground: 224 10% 10%;
@@ -41,7 +42,7 @@
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
-  /* Solo Leveling Dark Theme */
+  /* Solo Leveling System Theme (Dark) */
   .dark {
     --background: 246 24% 9%;      /* Deep, dark purple-gray */
     --foreground: 240 10% 89%;     /* Off-white */
