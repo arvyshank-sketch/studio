@@ -11,12 +11,14 @@ import { GenerateJournalPromptOutput, GenerateJournalPromptOutputSchema } from '
 
 
 export async function generateJournalPrompt(): Promise<GenerateJournalPromptOutput> {
-  return generateJournalPromptFlow();
+  const result = await generateJournalPromptFlow();
+  // Ensure we never return null from the top-level function.
+  return result ?? "What is one thing you are grateful for today?";
 }
 
 const prompt = ai.definePrompt({
   name: 'generateJournalPrompt',
-  output: {schema: GenerateJournalPromptOutputSchema},
+  output: {schema: GenerateJournalPromptOutputSchema.nullable()},
   prompt: `You are a helpful assistant that provides insightful and thought-provoking journal prompts for self-reflection.
 
 Generate a single, concise journal prompt. The prompt should encourage deep thought but be approachable. It should be a question or a statement to reflect upon.
@@ -34,7 +36,7 @@ Example prompts:
 const generateJournalPromptFlow = ai.defineFlow(
   {
     name: 'generateJournalPromptFlow',
-    outputSchema: GenerateJournalPromptOutputSchema,
+    outputSchema: GenerateJournalPromptOutputSchema.nullable(),
   },
   async () => {
     const {output} = await prompt();
