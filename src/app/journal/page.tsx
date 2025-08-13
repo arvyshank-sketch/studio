@@ -89,7 +89,7 @@ const MotivationCard = () => {
     }, []);
 
     return (
-        <Card className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-xl">
+        <Card className="bg-gradient-to-r from-primary to-purple-600 text-white shadow-xl">
             <CardContent className="p-6 flex items-center justify-between">
                 {isLoading ? (
                     <div className="w-full flex items-center justify-center gap-2">
@@ -233,12 +233,14 @@ export default function JournalPage() {
 
   const formValues = form.watch();
   useEffect(() => {
-    // Auto-save on change
-    const subscription = form.watch(() => {
+    if(!isClient) return;
+    const debouncedSubmit = setTimeout(() => {
         onSubmit(form.getValues());
-    });
-    return () => subscription.unsubscribe();
-  }, [form, onSubmit]);
+    }, 500); // Debounce time in ms
+
+    return () => clearTimeout(debouncedSubmit);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formValues, isClient, selectedDateString]);
 
   return (
     <div className="p-4 md:p-8 space-y-6">
