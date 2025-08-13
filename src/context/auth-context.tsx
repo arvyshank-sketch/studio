@@ -9,7 +9,7 @@ import {
 } from 'react';
 import { onAuthStateChanged, type User, updateProfile } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 
 interface AuthContextType {
@@ -33,34 +33,42 @@ export const AuthContextProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
         // User is signed in.
-        const userDocRef = doc(db, 'users', user.uid);
+        const userDocRef = doc(db, 'users', currentUser.uid);
         const userDocSnap = await getDoc(userDocRef);
 
         if (!userDocSnap.exists()) {
-          // New user, create user document
-          const newDisplayName = user.displayName || generateUsername(user.email!);
+          // New user, create user document in Firestore
+          const newDisplayName = currentUser.displayName || generateUsername(currentUser.email!);
           
-          if (!user.displayName) {
-             // Update the user's profile in Firebase Auth as well
-            await updateProfile(user, { displayName: newDisplayName });
+          try {
+            // Update the user's profile in Firebase Auth first
+            if (!currentUser.displayName) {
+              await updateProfile(currentUser, { displayName: newDisplayName });
+            }
+            
+            // Then create the document in Firestore
+            await setDoc(userDocRef, {
+              uid: currentUser.uid,
+              email: currentUser.email,
+              displayName: newDisplayName,
+              photoURL: currentUser.photoURL,
+              createdAt: serverTimestamp(),
+            });
+            
+            // Reload the user to get the updated profile information
+            await currentUser.reload();
+            setUser(auth.currentUser);
+
+          } catch (error) {
+             console.error("Error creating new user entry:", error);
+             setUser(currentUser); // Set user even if profile update fails
           }
-          
-          await setDoc(userDocRef, {
-            email: user.email,
-            displayName: newDisplayName,
-            photoURL: user.photoURL,
-            createdAt: new Date(),
-          });
-          
-          // Important: We need to get the latest user object after the profile update
-          const updatedUser = auth.currentUser;
-          setUser(updatedUser);
 
         } else {
-           setUser(user);
+           setUser(currentUser);
         }
 
       } else {

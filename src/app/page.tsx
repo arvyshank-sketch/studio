@@ -45,7 +45,7 @@ function DashboardPage() {
   return (
     <div className="flex flex-col gap-8 p-4 md:p-8">
       <header>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+        <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-4xl break-words">
           Welcome, {user?.displayName || user?.email}!
         </h1>
         <p className="text-muted-foreground">Your personal dashboard for holistic growth.</p>
