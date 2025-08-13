@@ -24,7 +24,8 @@ import {
   Utensils,
   IndianRupee,
   Calendar,
-  AlertTriangle,
+  AlertCircle,
+  Check,
 } from 'lucide-react';
 import { auth, db } from '@/lib/firebase';
 import { useAuth } from '@/context/auth-context';
@@ -199,13 +200,13 @@ function DashboardPage() {
             if (!questData || !questData.isCompleted) {
                 const newQuest: UnexpectedQuest = {
                     id: todayStr,
-                    title: 'Unexpected Quest',
+                    title: 'Strength Training',
                     description: 'A sudden mission has appeared. Complete it by the end of the day or face a penalty.',
                     exercises: [
                         { name: 'Push-ups', goal: 25, completed: false },
                         { name: 'Sit-ups', goal: 35, completed: false },
                         { name: 'Squats', goal: 40, completed: false },
-                        { name: 'Running', goal: 2, completed: false } // in km
+                        { name: 'Running', goal: 2, completed: false, unit: 'km' }
                     ],
                     isCompleted: false,
                     generatedAt: serverTimestamp(),
@@ -460,39 +461,61 @@ function DashboardPage() {
 
       {/* Unexpected Quest Section */}
       {!isQuestLoading && unexpectedQuest && (
-        <Card className="border-accent ring-2 ring-accent/50">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-accent"><AlertTriangle/> {unexpectedQuest.title}</CardTitle>
-                <CardDescription>{unexpectedQuest.description}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="space-y-3">
-                    {unexpectedQuest.exercises.map(ex => (
-                        <div key={ex.name} className="flex items-center space-x-3">
-                           <Checkbox 
-                                id={`ex-${ex.name}`} 
-                                checked={ex.completed}
-                                onCheckedChange={(checked) => handleQuestExerciseToggle(ex.name, checked as boolean)}
-                                disabled={unexpectedQuest.isCompleted}
-                            />
-                           <label
-                                htmlFor={`ex-${ex.name}`}
-                                className={cn("text-sm font-medium leading-none", unexpectedQuest.isCompleted || ex.completed ? 'line-through text-muted-foreground' : '')}
-                            >
-                                {ex.goal} {ex.name}{ex.name.endsWith('s') ? '' : 's'}{ex.name === 'Running' && 'km'}
-                            </label>
-                        </div>
+        <div
+            className="p-6 font-mono text-cyan-200 border-2 border-cyan-400/50 shadow-2xl shadow-cyan-500/20 rounded-lg bg-black/70 backdrop-blur-sm"
+            style={{ textShadow: '0 0 5px hsl(198 90% 55% / 0.5)'}}
+        >
+            <div className='flex items-center gap-4 px-4 py-2 border border-cyan-400/50 rounded-md mb-6'>
+                <AlertCircle className="size-6 text-cyan-300"/>
+                <h3 className="text-xl font-bold tracking-widest text-cyan-300">QUEST INFO</h3>
+            </div>
+            
+            <div className="text-center mb-6">
+                <p className='tracking-wider'>[Daily Quest: {unexpectedQuest.title} has arrived.]</p>
+            </div>
+            
+            <div className="mb-8">
+                <h4 className='text-center text-lg font-bold tracking-widest mb-4 border-b-2 border-cyan-400/50 pb-2 w-24 mx-auto'>GOAL</h4>
+                <ul className='space-y-3'>
+                    {unexpectedQuest.exercises.map((ex, i) => (
+                       <li key={i} className="flex justify-between items-center text-lg">
+                           <span>{ex.name}</span>
+                           <div className="flex items-center gap-3">
+                               <span className='font-sans tracking-widest'>[{ex.goal}{ex.unit}]</span>
+                               <Checkbox 
+                                    id={`ex-${ex.name}`} 
+                                    checked={ex.completed}
+                                    onCheckedChange={(checked) => handleQuestExerciseToggle(ex.name, checked as boolean)}
+                                    disabled={unexpectedQuest.isCompleted}
+                                />
+                           </div>
+                       </li>
                     ))}
+                </ul>
+            </div>
+            
+            <div className='text-center space-y-2 mb-8'>
+                <p className='font-bold text-lg tracking-wider text-cyan-100'>WARNING: Failure to complete</p>
+                <p className='text-md tracking-wider text-cyan-200/80'>the daily quest will result in</p>
+                <p className='text-md tracking-wider text-cyan-200/80'>an appropriate <span className="text-red-400 font-bold" style={{textShadow: '0 0 5px hsl(350 78% 55% / 0.8)'}}>penalty.</span></p>
+            </div>
+
+            {!unexpectedQuest.isCompleted && (
+                <div className='flex justify-center'>
+                    <button 
+                        onClick={handleCompleteQuest}
+                        className="p-2 border-2 border-cyan-400/80 rounded-md hover:bg-cyan-400/20 hover:shadow-lg hover:shadow-cyan-500/30 transition-all duration-200 group disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={!unexpectedQuest.exercises.every(ex => ex.completed)}
+                    >
+                        <Check className="size-10 text-cyan-300 group-hover:scale-110 transition-transform" />
+                    </button>
                 </div>
-                {!unexpectedQuest.isCompleted ? (
-                    <Button onClick={handleCompleteQuest} className="w-full">
-                        Complete Quest
-                    </Button>
-                ) : (
-                    <p className="text-center text-green-500 font-bold">Quest Completed!</p>
-                )}
-            </CardContent>
-        </Card>
+            )}
+             {unexpectedQuest.isCompleted && (
+                <p className="text-center text-green-500 font-bold tracking-widest">[ Quest Completed ]</p>
+            )}
+
+        </div>
       )}
 
       {/* Gamification Section */}

@@ -92,6 +92,7 @@ export type QuestExercise = {
     name: string;
     goal: number;
     completed: boolean;
+    unit?: string;
 };
 
 export type UnexpectedQuest = {
