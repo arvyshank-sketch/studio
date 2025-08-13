@@ -39,7 +39,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { DashboardStats, WeightEntry } from '@/lib/types';
-import { startOfWeek, endOfWeek, differenceInDays } from 'date-fns';
+import { startOfWeek, endOfWeek, format } from 'date-fns';
 
 const featureCards = [
   {
