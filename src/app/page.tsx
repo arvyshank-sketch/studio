@@ -471,7 +471,7 @@ function DashboardPage() {
             </div>
             
             <div className="text-center mb-6">
-                <p className='tracking-wider'>[Daily Quest: {unexpectedQuest.title} has arrived.]</p>
+                <p className='tracking-wider'>[Unexpected Quest: {unexpectedQuest.title} has arrived.]</p>
             </div>
             
             <div className="mb-8">
