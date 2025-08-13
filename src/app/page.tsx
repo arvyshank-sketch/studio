@@ -2,30 +2,22 @@
 'use client';
 
 import withAuth from '@/components/with-auth';
-import Link from 'next/link';
 import {
   Card,
   CardHeader,
   CardTitle,
-  CardDescription,
   CardContent,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import {
-  ArrowRight,
-  BookMarked,
-  Sparkles,
-  UtensilsCrossed,
-  Weight,
-  Moon,
-  Sun,
   TrendingUp,
   TrendingDown,
   PenSquare,
   Flame,
-  Award,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { useTheme } from '@/hooks/use-theme';
@@ -35,9 +27,7 @@ import {
   query,
   where,
   getDocs,
-  Timestamp,
   orderBy,
-  limit,
   doc,
   onSnapshot,
 } from 'firebase/firestore';
@@ -46,33 +36,6 @@ import type { DashboardStats, WeightEntry, UserProfile, DailyLog } from '@/lib/t
 import { startOfWeek, endOfWeek, format } from 'date-fns';
 import { getLevel, getXpForLevel, badges as definedBadges } from '@/lib/gamification';
 import { cn } from '@/lib/utils';
-
-const featureCards = [
-  {
-    title: 'Daily Tracking',
-    description: 'Log your studies, Quran reading, expenses, and habits.',
-    href: '/journal',
-    icon: <BookMarked className="size-8 text-primary" />,
-  },
-  {
-    title: 'Weight Tracking',
-    description: 'Log your weight and see your progress over time.',
-    href: '/weight',
-    icon: <Weight className="size-8 text-primary" />,
-  },
-  {
-    title: 'Diet & Calories',
-    description: 'Keep a log of your meals and daily calorie intake.',
-    href: '/diet',
-    icon: <UtensilsCrossed className="size-8 text-primary" />,
-  },
-  {
-    title: 'AI Progress Analysis',
-    description: 'Analyze your physique changes with AI.',
-    href: '/progress',
-    icon: <Sparkles className="size-8 text-primary" />,
-  },
-];
 
 function DashboardPage() {
   const { user } = useAuth();
@@ -333,28 +296,6 @@ function DashboardPage() {
           icon={<Flame className="h-5 w-5 text-muted-foreground" />}
           isLoading={isLoading}
         />
-      </div>
-
-      {/* Quick Links Section */}
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight mb-4">Quick Links</h2>
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            {featureCards.map((feature) => (
-            <Link href={feature.href} key={feature.title} className="flex">
-                <Card className="w-full transition-all hover:shadow-lg hover:scale-[1.02] dark:hover:border-primary/50">
-                <CardHeader className="flex-row items-start gap-4">
-                    <div className="flex size-12 items-center justify-center rounded-lg bg-primary/10">
-                      {feature.icon}
-                    </div>
-                    <div>
-                        <CardTitle className="text-base font-bold text-foreground">{feature.title}</CardTitle>
-                        <p className="text-sm text-muted-foreground mt-1">{feature.description}</p>
-                    </div>
-                </CardHeader>
-                </Card>
-            </Link>
-            ))}
-        </div>
       </div>
     </div>
   );
