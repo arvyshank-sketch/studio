@@ -190,72 +190,80 @@ function ProfilePage() {
     <div className="p-4 md:p-8">
       <Dialog open={isAvatarDialogOpen} onOpenChange={setIsAvatarDialogOpen}>
         <header className="mb-8 flex items-center gap-4">
-            {isLoading ? <Skeleton className="size-20 rounded-full" /> : (
-                <DialogTrigger asChild>
-                    <button className="relative group">
-                        <Avatar className="size-20 border-2 border-primary">
-                            <AvatarImage 
-                                src={profile?.photoURL || DEFAULT_AVATAR_URL} 
-                                alt={profile?.displayName || "User Avatar"} 
-                                onError={(e) => { e.currentTarget.src = DEFAULT_AVATAR_URL; }}
-                            />
-                            <AvatarFallback className="text-2xl bg-muted">
-                                {profile?.displayName?.charAt(0).toUpperCase() || "?"}
-                            </AvatarFallback>
-                        </Avatar>
-                        <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Pencil className="size-8 text-white" />
-                        </div>
-                    </button>
-                </DialogTrigger>
-            )}
-            <div>
+          {isLoading ? (
+            <Skeleton className="size-20 rounded-full" />
+          ) : (
+            <DialogTrigger asChild>
+              <button className="relative group">
+                <Avatar className="size-20 border-2 border-primary">
+                  <AvatarImage
+                    src={profile?.photoURL || DEFAULT_AVATAR_URL}
+                    alt={profile?.displayName || "User Avatar"}
+                    onError={(e) => {
+                      e.currentTarget.src = DEFAULT_AVATAR_URL;
+                    }}
+                  />
+                  <AvatarFallback className="text-2xl bg-muted">
+                    {profile?.displayName?.charAt(0).toUpperCase() || "?"}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Pencil className="size-8 text-white" />
+                </div>
+              </button>
+            </DialogTrigger>
+          )}
+
+          <div>
             {isLoading ? (
-                <div className="space-y-2">
-                    <Skeleton className="h-8 w-48" />
-                    <Skeleton className="h-5 w-64" />
-                    </div>
+              <div className="space-y-2">
+                <Skeleton className="h-8 w-48" />
+                <Skeleton className="h-5 w-64" />
+              </div>
             ) : (
-                <>
-                    <h1 className="text-3xl font-bold tracking-tight text-foreground">
-                        {profile?.displayName}
-                    </h1>
-                    <p className="text-muted-foreground">{profile?.email}</p>
-                </>
+              <>
+                <h1 className="text-3xl font-bold tracking-tight text-foreground">
+                  {profile?.displayName}
+                </h1>
+                <p className="text-muted-foreground">{profile?.email}</p>
+              </>
             )}
-            </div>
+          </div>
         </header>
 
         <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Choose Your Avatar</DialogTitle>
-                <DialogDescription>Select a new face for the Monarch.</DialogDescription>
-            </DialogHeader>
-            {isUpdatingAvatar ? (
-                <div className="flex items-center justify-center p-12">
-                    <Loader2 className="size-8 animate-spin text-primary" />
-                </div>
-            ) : (
-                <div className="grid grid-cols-4 gap-4 py-4">
-                    {jinwooAvatars.map(avatar => (
-                        <button
-                            key={avatar.id}
-                            className="relative rounded-full overflow-hidden border-2 border-transparent hover:border-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring"
-                            onClick={() => handleAvatarSelect(avatar.src, avatar.hint)}
-                        >
-                            <Image
-                                src={avatar.src || DEFAULT_AVATAR_URL}
-                                alt={`Avatar ${avatar.hint}`}
-                                width={128}
-                                height={128}
-                                className="aspect-square object-cover"
-                                onError={(e) => { e.currentTarget.src = DEFAULT_AVATAR_URL; }}
-                                data-ai-hint={avatar.hint}
-                            />
-                        </button>
-                    ))}
-                </div>
-            )}
+          <DialogHeader>
+            <DialogTitle>Choose Your Avatar</DialogTitle>
+            <DialogDescription>Select a new face for the Monarch.</DialogDescription>
+          </DialogHeader>
+
+          {isUpdatingAvatar ? (
+            <div className="flex items-center justify-center p-12">
+              <Loader2 className="size-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-4 gap-4 py-4">
+              {jinwooAvatars.map((avatar) => (
+                <button
+                  key={avatar.id}
+                  className="relative rounded-full overflow-hidden border-2 border-transparent hover:border-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring"
+                  onClick={() => handleAvatarSelect(avatar.src, avatar.hint)}
+                >
+                  <Image
+                    src={avatar.src || DEFAULT_AVATAR_URL}
+                    alt={`Avatar ${avatar.hint}`}
+                    width={128}
+                    height={128}
+                    className="aspect-square object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = DEFAULT_AVATAR_URL;
+                    }}
+                    data-ai-hint={avatar.hint}
+                  />
+                </button>
+              ))}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -407,3 +415,5 @@ function ProfilePage() {
 }
 
 export default withAuth(ProfilePage);
+
+    
