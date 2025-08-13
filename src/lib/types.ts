@@ -22,6 +22,7 @@ export type DailyLog = {
     expenses: number;
     abstained: boolean;
     notes?: string;
+    customHabits?: Record<string, boolean>;
 }
 
 export type JournalEntry = {
@@ -39,6 +40,12 @@ export type Badge = {
   icon: React.ElementType;
 };
 
+export type Habit = {
+    id: string;
+    name: string;
+    createdAt: Timestamp;
+}
+
 export type UserProfile = {
     uid: string;
     email: string;
@@ -49,6 +56,7 @@ export type UserProfile = {
     xp?: number;
     level?: number;
     badges?: string[];
+    habits?: Habit[];
 }
 
 

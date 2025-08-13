@@ -12,6 +12,7 @@ export const XP_REWARDS = {
   QURAN: 10,
   EXPENSE_LOGGED: 5,
   ABSTAINED: 20,
+  CUSTOM_HABIT: 15,
 };
 
 /**
@@ -141,6 +142,12 @@ export const processGamification = (userProfile: UserProfile, allLogs: DailyLog[
   if (newLog.quranPagesRead > 0) earnedXp += XP_REWARDS.QURAN;
   if (newLog.expenses > 0) earnedXp += XP_REWARDS.EXPENSE_LOGGED;
   if (newLog.abstained) earnedXp += XP_REWARDS.ABSTAINED;
+
+  // Add XP for custom habits
+  if (newLog.customHabits) {
+    const completedHabits = Object.values(newLog.customHabits).filter(Boolean).length;
+    earnedXp += completedHabits * XP_REWARDS.CUSTOM_HABIT;
+  }
 
   const currentXp = userProfile.xp ?? 0;
   const newXp = currentXp + earnedXp;

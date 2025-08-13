@@ -13,7 +13,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import {
   TrendingUp,
-  TrendingDown,
   PenSquare,
   Flame,
   Moon,
@@ -25,6 +24,7 @@ import {
   IndianRupee,
   LogOut,
   Calendar,
+  PlusCircle,
 } from 'lucide-react';
 import { auth } from '@/lib/firebase';
 import { useAuth } from '@/context/auth-context';
@@ -56,6 +56,7 @@ import {
   Area,
 } from 'recharts';
 import { useRouter } from 'next/navigation';
+import { HabitManager } from '@/components/habit-manager';
 
 
 function DashboardPage() {
@@ -68,6 +69,7 @@ function DashboardPage() {
   const [chartData, setChartData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [challengeProgress, setChallengeProgress] = useState<{week: number; day: number} | null>(null);
+  const [isHabitManagerOpen, setIsHabitManagerOpen] = useState(false);
   
   const storageKey = user ? `${MEALS_STORAGE_KEY}-${user.uid}` : MEALS_STORAGE_KEY;
   const [allMeals] = useSyncedLocalStorage<MealEntry[]>(storageKey, []);
@@ -215,14 +217,12 @@ function DashboardPage() {
     unit,
     icon,
     isLoading,
-    change,
   }: {
     title: string;
     value: number | string;
     unit?: string;
     icon: React.ReactNode;
     isLoading: boolean;
-    change?: number;
   }) => (
     <Card>
       <CardHeader>
@@ -239,16 +239,6 @@ function DashboardPage() {
               {unit}
             </span>
           </div>
-        )}
-        {change !== undefined && !isLoading && (
-          <p className="text-xs text-muted-foreground mt-1">
-            <span className={cn(
-                change > 0 ? "text-red-400" : "text-green-400"
-            )}>
-              {change > 0 ? `+${change.toFixed(1)}kg` : `${change.toFixed(1)}kg`}{' '}
-            </span>
-            from last week
-          </p>
         )}
       </CardContent>
     </Card>
@@ -374,8 +364,8 @@ function DashboardPage() {
           value={stats?.weeklyWeightChange.toFixed(1) ?? '0.0'}
           unit=" kg"
           icon={
-            stats && stats.weeklyWeightChange < 0 ? (
-              <TrendingDown className="h-5 w-5 text-green-400" />
+            stats && stats.weeklyWeightChange <= 0 ? (
+              <TrendingUp className="h-5 w-5 text-green-400" />
             ) : (
               <TrendingUp className="h-5 w-5 text-red-400" />
             )
@@ -518,6 +508,42 @@ function DashboardPage() {
                     </div>
                 </div>
             </CardContent>
+        </Card>
+       )}
+       {profile && (
+        <Card>
+            <CardHeader>
+                 <div className="flex items-center justify-between">
+                    <CardTitle>Custom Habits</CardTitle>
+                    <Button variant="ghost" size="icon" onClick={() => setIsHabitManagerOpen(true)}>
+                        <PlusCircle className="size-5" />
+                        <span className="sr-only">Add or manage habits</span>
+                    </Button>
+                </div>
+                <CardDescription>
+                    Add and track your own daily habits.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                {isLoading ? (
+                    <Skeleton className="h-10 w-full" />
+                ) : profile.habits && profile.habits.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                        {profile.habits.map(habit => (
+                            <div key={habit.id} className="flex items-center gap-2 rounded-full border border-border bg-muted/50 px-3 py-1 text-sm">
+                                {habit.name}
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-sm text-muted-foreground">No custom habits added yet. Click the '+' to add your first one!</p>
+                )}
+            </CardContent>
+             <HabitManager
+                isOpen={isHabitManagerOpen}
+                setIsOpen={setIsHabitManagerOpen}
+                profile={profile}
+             />
         </Card>
        )}
     </div>

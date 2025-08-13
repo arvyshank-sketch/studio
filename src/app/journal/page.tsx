@@ -19,7 +19,7 @@ import {
 import { db }from '@/lib/firebase';
 import { useAuth }from '@/context/auth-context';
 import withAuth from '@/components/with-auth';
-import type { DailyLog, UserProfile }from '@/lib/types';
+import type { DailyLog, Habit, UserProfile }from '@/lib/types';
 import { format, subDays, parse }from 'date-fns';
 import { processGamification } from '@/lib/gamification';
 
@@ -44,11 +44,12 @@ import { Input }from '@/components/ui/input';
 import { Textarea }from '@/components/ui/textarea';
 import { useToast }from '@/hooks/use-toast';
 import { Switch }from '@/components/ui/switch';
-import { Loader2, BookOpen, Brain, DollarSign, HeartHandshake, CheckCircle, Flame }from 'lucide-react';
+import { Loader2, BookOpen, Brain, DollarSign, HeartHandshake, CheckCircle, Flame, Repeat }from 'lucide-react';
 import { Skeleton }from '@/components/ui/skeleton';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Separator } from '@/components/ui/separator';
 
-const logSchema = z.object({
+const baseLogSchema = z.object({
   studyDuration: z.coerce.number().min(0).optional(),
   quranPagesRead: z.coerce.number().min(0).optional(),
   expenses: z.coerce.number().min(0, 'Must be a positive number').max(1000000, "Please enter a reasonable expense amount.").optional(),
@@ -56,7 +57,6 @@ const logSchema = z.object({
   notes: z.string().optional(),
 });
 
-type LogFormValues = z.infer<typeof logSchema>;
 
 const studyOptions = [
     { value: 0.5, label: '30 min' },
@@ -81,17 +81,13 @@ function DailyLogPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [streak, setStreak] = useState(0);
+  const [userHabits, setUserHabits] = useState<Habit[]>([]);
   const today = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
   
-  const form = useForm<LogFormValues>({
+  const [logSchema, setLogSchema] = useState(baseLogSchema);
+  
+  const form = useForm<z.infer<typeof logSchema>>({
     resolver: zodResolver(logSchema),
-    defaultValues: {
-      studyDuration: 0,
-      quranPagesRead: 0,
-      expenses: 0,
-      abstained: false,
-      notes: '',
-    },
   });
 
   const userDocRef = useMemo(() => {
@@ -114,6 +110,27 @@ function DailyLogPage() {
     }
     return null;
   }, [user]);
+  
+  // Update schema when habits change
+  useEffect(() => {
+    if (userHabits.length > 0) {
+        const habitFields = userHabits.reduce((acc, habit) => {
+            acc[habit.id] = z.boolean().default(false);
+            return acc;
+        }, {} as Record<string, z.ZodBoolean>);
+        
+        const extendedSchema = baseLogSchema.extend({
+            customHabits: z.object(habitFields).optional()
+        });
+        
+        setLogSchema(extendedSchema);
+        form.reset(form.getValues(), {
+            keepDefaultValues: true
+        });
+    } else {
+        setLogSchema(baseLogSchema);
+    }
+  }, [userHabits, form]);
 
   const calculateStreak = useCallback(async () => {
     if (!logsCollectionRef) return 0;
@@ -162,41 +179,64 @@ function DailyLogPage() {
 
 
   useEffect(() => {
-    const fetchLog = async () => {
-      if (!docRef) return;
+    const fetchLogAndProfile = async () => {
+      if (!docRef || !userDocRef) return;
       setIsLoading(true);
       try {
+        const userProfileSnap = await getDoc(userDocRef);
+        if (userProfileSnap.exists()) {
+            const profile = userProfileSnap.data() as UserProfile;
+            setUserHabits(profile.habits || []);
+        }
+
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-          form.reset(docSnap.data() as LogFormValues);
+          form.reset(docSnap.data() as z.infer<typeof logSchema>);
+        } else {
+            // Set default values for habits if no log exists
+            const defaultValues: any = {
+                studyDuration: 0,
+                quranPagesRead: 0,
+                expenses: 0,
+                abstained: false,
+                notes: '',
+                customHabits: {},
+            };
+            (userHabits || []).forEach(habit => {
+                defaultValues.customHabits[habit.id] = false;
+            });
+            form.reset(defaultValues);
         }
+
         const currentStreak = await calculateStreak();
         setStreak(currentStreak);
       } catch (error) {
-        console.error('Error fetching log:', error);
+        console.error('Error fetching data:', error);
         toast({
           variant: 'destructive',
           title: 'Error',
-          description: 'Could not fetch today\'s log.',
+          description: 'Could not fetch today\'s log or profile.',
         });
       } finally {
         setIsLoading(false);
       }
     };
-    fetchLog();
-  }, [docRef, form, toast, calculateStreak]);
+    fetchLogAndProfile();
+  }, [docRef, userDocRef, form, toast, calculateStreak]);
 
-  const handleFormSubmit = async (data: LogFormValues) => {
+  const handleFormSubmit = async (data: z.infer<typeof logSchema>) => {
     if (!docRef || !userDocRef) return;
     setIsSubmitting(true);
     
     const logData: DailyLog = {
-      ...data,
       date: today,
       studyDuration: data.studyDuration || 0,
       quranPagesRead: data.quranPagesRead || 0,
       expenses: data.expenses || 0,
-    }
+      abstained: data.abstained || false,
+      notes: data.notes || '',
+      customHabits: data.customHabits || {},
+    };
 
     try {
       await runTransaction(db, async (transaction) => {
@@ -279,8 +319,8 @@ function DailyLogPage() {
                                             <FormLabel className="flex items-center gap-2"><Brain /> Study Duration</FormLabel>
                                             <FormControl>
                                                 <RadioGroup
-                                                onValueChange={field.onChange}
-                                                defaultValue={field.value?.toString()}
+                                                onValueChange={(value) => field.onChange(parseFloat(value))}
+                                                value={field.value?.toString()}
                                                 className="flex flex-wrap gap-4"
                                                 >
                                                 {studyOptions.map(option => (
@@ -305,8 +345,8 @@ function DailyLogPage() {
                                             <FormLabel className="flex items-center gap-2"><BookOpen /> Qur'an Read</FormLabel>
                                             <FormControl>
                                                 <RadioGroup
-                                                onValueChange={field.onChange}
-                                                defaultValue={field.value?.toString()}
+                                                onValueChange={(value) => field.onChange(parseInt(value))}
+                                                value={field.value?.toString()}
                                                 className="flex flex-wrap gap-x-6 gap-y-4"
                                                 >
                                                 {quranOptions.map(option => (
@@ -331,7 +371,7 @@ function DailyLogPage() {
                                         render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel className="flex items-center gap-2"><DollarSign /> Financial Expenses</FormLabel>
-                                                <FormControl><Input type="number" step="0.01" placeholder="0" {...field} /></FormControl>
+                                                <FormControl><Input type="number" step="0.01" placeholder="0" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
@@ -352,6 +392,33 @@ function DailyLogPage() {
                                         )}
                                     />
                                 </div>
+                                
+                                {userHabits.length > 0 && (
+                                    <div>
+                                        <Separator className="my-6"/>
+                                        <div className="space-y-4">
+                                            <h3 className="text-lg font-medium flex items-center gap-2"><Repeat /> Custom Habits</h3>
+                                            {userHabits.map(habit => (
+                                                <FormField
+                                                    key={habit.id}
+                                                    control={form.control}
+                                                    name={`customHabits.${habit.id}` as any}
+                                                    render={({ field }) => (
+                                                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                                        <div className="space-y-0.5">
+                                                            <FormLabel className="text-base">{habit.name}</FormLabel>
+                                                        </div>
+                                                        <FormControl>
+                                                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                                        </FormControl>
+                                                    </FormItem>
+                                                    )}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
 
                                 <FormField
                                     control={form.control}
