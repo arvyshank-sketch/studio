@@ -40,7 +40,7 @@ export const AuthContextProvider = ({ children }: { children: ReactNode }) => {
 
       if (!userDocSnap.exists()) {
         const newDisplayName = user.displayName || generateUsername(user.email!);
-        const photoURL = user.photoURL || `https://placehold.co/128x128.png`;
+        const photoURL = user.photoURL || `https://placehold.co/128x128/000000/FFFFFF.png`;
         try {
           // We only update the profile if it's missing a display name or photo
           if (!user.displayName || !user.photoURL) {
