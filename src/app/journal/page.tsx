@@ -15,6 +15,7 @@ import {
   limit,
   getDocs,
   runTransaction,
+  onSnapshot,
 } from 'firebase/firestore';
 import { db }from '@/lib/firebase';
 import { useAuth }from '@/context/auth-context';
@@ -114,7 +115,7 @@ function DailyLogPage() {
     return null;
   }, [user]);
   
-  // Update schema when habits change
+  // Dynamically update form schema and default values when habits change
   useEffect(() => {
     if (userProfile?.habits && userProfile.habits.length > 0) {
         const habitFields = userProfile.habits.reduce((acc, habit) => {
@@ -123,12 +124,23 @@ function DailyLogPage() {
         }, {} as Record<string, z.ZodBoolean>);
         
         const extendedSchema = baseLogSchema.extend({
-            customHabits: z.object(habitFields).optional()
+            customHabits: z.object(habitFields)
         });
         
         setLogSchema(extendedSchema);
-        form.reset(form.getValues(), {
-            keepDefaultValues: true
+        
+        const existingValues = form.getValues();
+        const defaultHabits = userProfile.habits.reduce((acc, habit) => {
+            acc[habit.id] = false;
+            return acc;
+        }, {} as Record<string, boolean>);
+
+        form.reset({
+            ...existingValues,
+            customHabits: {
+                ...defaultHabits,
+                ...existingValues.customHabits,
+            }
         });
     } else {
         setLogSchema(baseLogSchema);
@@ -182,52 +194,52 @@ function DailyLogPage() {
 
 
   useEffect(() => {
-    const fetchLogAndProfile = async () => {
-      if (!docRef || !userDocRef) return;
+    if (!userDocRef) return;
+    
+    // Set up real-time listener for user profile
+    const unsubscribeProfile = onSnapshot(userDocRef, (doc) => {
+        if (doc.exists()) {
+            setUserProfile(doc.data() as UserProfile);
+        }
+    }, (error) => {
+         console.error('Error listening to profile updates:', error);
+         toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Could not fetch user profile.',
+        });
+    });
+
+    // Fetch initial log and calculate streak
+    const fetchInitialData = async () => {
       setIsLoading(true);
       try {
-        const userProfileSnap = await getDoc(userDocRef);
-        if (userProfileSnap.exists()) {
-            const profile = userProfileSnap.data() as UserProfile;
-            setUserProfile(profile);
-        }
-
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          form.reset(docSnap.data() as z.infer<typeof logSchema>);
-        } else {
-            // Set default values for habits if no log exists
-            const defaultValues: any = {
-                studyDuration: 0,
-                quranPagesRead: 0,
-                expenses: 0,
-                abstained: false,
-                notes: '',
-                customHabits: {},
-            };
-            if (userProfile?.habits) {
-              userProfile.habits.forEach(habit => {
-                defaultValues.customHabits[habit.id] = false;
-              });
+        if (docRef) {
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+              form.reset(docSnap.data() as z.infer<typeof logSchema>);
             }
-            form.reset(defaultValues);
         }
-
         const currentStreak = await calculateStreak();
         setStreak(currentStreak);
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error('Error fetching initial data:', error);
         toast({
           variant: 'destructive',
           title: 'Error',
-          description: 'Could not fetch today\'s log or profile.',
+          description: 'Could not fetch today\'s log.',
         });
       } finally {
         setIsLoading(false);
       }
     };
-    fetchLogAndProfile();
-  }, [docRef, userDocRef, form, toast, calculateStreak]);
+    
+    fetchInitialData();
+
+    return () => {
+        unsubscribeProfile();
+    };
+  }, [docRef, userDocRef, toast, calculateStreak]);
 
   const handleFormSubmit = async (data: z.infer<typeof logSchema>) => {
     if (!docRef || !userDocRef) return;
@@ -245,7 +257,6 @@ function DailyLogPage() {
 
     try {
       await runTransaction(db, async (transaction) => {
-        // 1. Get current user profile and all logs
         const userProfileSnap = await transaction.get(userDocRef);
         if (!userProfileSnap.exists()) {
           throw new Error("User profile not found!");
@@ -256,13 +267,10 @@ function DailyLogPage() {
         const allLogsSnap = await getDocs(allLogsQuery);
         const allLogs = allLogsSnap.docs.map(doc => doc.data() as DailyLog);
 
-        // 2. Save today's log
         transaction.set(docRef, logData, { merge: true });
 
-        // 3. Process gamification
         const updatedProfile = processGamification(profile, allLogs, logData);
 
-        // 4. Update the user profile with new XP, level, and badges
         transaction.update(userDocRef, updatedProfile);
       });
       
@@ -397,6 +405,44 @@ function DailyLogPage() {
                                         )}
                                     />
                                 </div>
+                                <Separator />
+
+                                <div>
+                                    <div className="mb-4 flex items-center justify-between">
+                                        <h3 className="text-lg font-medium flex items-center gap-2"><Repeat /> Custom Habits</h3>
+                                        <Button type="button" variant="ghost" size="icon" onClick={() => setIsHabitManagerOpen(true)}>
+                                            <PlusCircle className="size-5" />
+                                            <span className="sr-only">Add or manage habits</span>
+                                        </Button>
+                                    </div>
+                                    <div className="space-y-4">
+                                        {userProfile?.habits && userProfile.habits.length > 0 ? (
+                                           userProfile.habits.map(habit => (
+                                                <FormField
+                                                    key={habit.id}
+                                                    control={form.control}
+                                                    name={`customHabits.${habit.id}` as any}
+                                                    render={({ field }) => (
+                                                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                                        <div className="space-y-0.5">
+                                                            <FormLabel className="text-base">{habit.name}</FormLabel>
+                                                        </div>
+                                                        <FormControl>
+                                                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                                        </FormControl>
+                                                    </FormItem>
+                                                    )}
+                                                />
+                                            ))
+                                        ) : (
+                                            <p className="text-sm text-center text-muted-foreground py-4">
+                                                No custom habits added yet. Click the '+' icon to add one.
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <Separator />
 
                                 <FormField
                                     control={form.control}
@@ -435,49 +481,6 @@ function DailyLogPage() {
                         <p className="text-sm mt-4 opacity-80">Keep going! Every day is a victory.</p>
                     </CardContent>
                 </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center justify-between">
-                            <span className="flex items-center gap-2"><Repeat /> Custom Habits</span>
-                            <Button variant="ghost" size="icon" onClick={() => setIsHabitManagerOpen(true)}>
-                                <PlusCircle className="size-5" />
-                                <span className="sr-only">Add or manage habits</span>
-                            </Button>
-                        </CardTitle>
-                        <CardDescription>Track your personal daily goals.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        {isLoading ? (
-                            <div className="space-y-3">
-                                <Skeleton className="h-12 w-full" />
-                                <Skeleton className="h-12 w-full" />
-                            </div>
-                        ) : userProfile?.habits && userProfile.habits.length > 0 ? (
-                           userProfile.habits.map(habit => (
-                                <FormField
-                                    key={habit.id}
-                                    control={form.control}
-                                    name={`customHabits.${habit.id}` as any}
-                                    render={({ field }) => (
-                                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                                        <div className="space-y-0.5">
-                                            <FormLabel className="text-base">{habit.name}</FormLabel>
-                                        </div>
-                                        <FormControl>
-                                            <Switch checked={field.value} onCheckedChange={field.onChange} />
-                                        </FormControl>
-                                    </FormItem>
-                                    )}
-                                />
-                            ))
-                        ) : (
-                            <p className="text-sm text-center text-muted-foreground py-4">
-                                No custom habits added yet. Click the '+' icon to add one.
-                            </p>
-                        )}
-                    </CardContent>
-                </Card>
             </div>
         </form>
        </Form>
@@ -491,3 +494,5 @@ function DailyLogPage() {
 }
 
 export default withAuth(DailyLogPage);
+
+    
