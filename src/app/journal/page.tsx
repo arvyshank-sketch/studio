@@ -283,7 +283,7 @@ function JournalPage() {
                 Get New Prompt
             </Button>
             {prompt && (
-                <Button variant="secondary" onClick={handleUsePrompt}>
+                <Button variant="outline" onClick={handleUsePrompt}>
                     <PenSquare />
                     Use This Prompt
                 </Button>
