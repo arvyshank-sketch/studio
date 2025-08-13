@@ -14,12 +14,14 @@ import {
   orderBy,
   limit,
   getDocs,
+  runTransaction,
 } from 'firebase/firestore';
 import { db }from '@/lib/firebase';
 import { useAuth }from '@/context/auth-context';
 import withAuth from '@/components/with-auth';
-import type { DailyLog }from '@/lib/types';
+import type { DailyLog, UserProfile }from '@/lib/types';
 import { format, subDays, parse }from 'date-fns';
+import { processGamification } from '@/lib/gamification';
 
 import { Button }from '@/components/ui/button';
 import {
@@ -91,6 +93,13 @@ function DailyLogPage() {
       notes: '',
     },
   });
+
+  const userDocRef = useMemo(() => {
+    if (user) {
+      return doc(db, 'users', user.uid);
+    }
+    return null;
+  }, [user]);
 
   const docRef = useMemo(() => {
     if (user) {
@@ -178,7 +187,7 @@ function DailyLogPage() {
   }, [docRef, form, toast, calculateStreak]);
 
   const handleFormSubmit = async (data: LogFormValues) => {
-    if (!docRef) return;
+    if (!docRef || !userDocRef) return;
     setIsSubmitting(true);
     
     const logData: DailyLog = {
@@ -190,13 +199,34 @@ function DailyLogPage() {
     }
 
     try {
-      await setDoc(docRef, logData, { merge: true });
+      await runTransaction(db, async (transaction) => {
+        // 1. Get current user profile and all logs
+        const userProfileSnap = await transaction.get(userDocRef);
+        if (!userProfileSnap.exists()) {
+          throw new Error("User profile not found!");
+        }
+        const userProfile = userProfileSnap.data() as UserProfile;
+
+        const allLogsQuery = query(logsCollectionRef, orderBy('date', 'desc'));
+        const allLogsSnap = await getDocs(allLogsQuery);
+        const allLogs = allLogsSnap.docs.map(doc => doc.data() as DailyLog);
+
+        // 2. Save today's log
+        transaction.set(docRef, logData, { merge: true });
+
+        // 3. Process gamification
+        const updatedProfile = processGamification(userProfile, allLogs, logData);
+
+        // 4. Update the user profile with new XP, level, and badges
+        transaction.update(userDocRef, updatedProfile);
+      });
+      
       const newStreak = await calculateStreak();
       setStreak(newStreak);
 
       toast({
         title: 'Log Saved!',
-        description: "Today's activities have been successfully logged.",
+        description: "Your progress, XP, and badges have been updated.",
         action: <div className="p-2 bg-green-500 text-white rounded-full"><CheckCircle size={24} /></div>,
       });
     } catch (error) {

@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Progress } from '@/components/ui/progress';
 import {
   ArrowRight,
   BookMarked,
@@ -24,10 +25,11 @@ import {
   TrendingDown,
   PenSquare,
   Flame,
+  Award,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { useTheme } from '@/hooks/use-theme';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   collection,
   query,
@@ -36,10 +38,13 @@ import {
   Timestamp,
   orderBy,
   limit,
+  doc,
+  onSnapshot,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { DashboardStats, WeightEntry } from '@/lib/types';
+import type { DashboardStats, WeightEntry, UserProfile, DailyLog } from '@/lib/types';
 import { startOfWeek, endOfWeek, format } from 'date-fns';
+import { getLevel, getXpForLevel, badges as definedBadges } from '@/lib/gamification';
 
 const featureCards = [
   {
@@ -73,8 +78,9 @@ function DashboardPage() {
   const { theme, setTheme } = useTheme();
   const [greeting, setGreeting] = useState('');
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
+  
   useEffect(() => {
     const getGreeting = () => {
       const hour = new Date().getHours();
@@ -83,9 +89,25 @@ function DashboardPage() {
       return 'Good Evening';
     };
     setGreeting(getGreeting());
+  }, []);
+
+  // Listener for user profile
+  useEffect(() => {
+    if (!user) return;
+    const userDocRef = doc(db, 'users', user.uid);
+    const unsubscribe = onSnapshot(userDocRef, (doc) => {
+        if (doc.exists()) {
+            setProfile(doc.data() as UserProfile);
+        }
+    });
+    return () => unsubscribe();
+  }, [user]);
+
+  // Fetch dashboard stats
+  useEffect(() => {
+    if (!user) return;
 
     const fetchDashboardStats = async () => {
-      if (!user) return;
       setIsLoading(true);
 
       const now = new Date();
@@ -121,9 +143,14 @@ function DashboardPage() {
       );
       const journalSnap = await getDocs(journalQuery);
       const journalCount = journalSnap.size;
+      
+      const allLogsQuery = query(journalRef, orderBy('date', 'desc'));
+      const allLogsSnap = await getDocs(allLogsQuery);
+      const allLogs = allLogsSnap.docs.map(doc => doc.data() as DailyLog);
 
-      // Placeholder for longest streak
-      const longestStreak = 0; 
+      let longestStreak = 0;
+      // ... streak calculation logic will go here in a future update ...
+
 
       setStats({
         weeklyWeightChange: weightChange,
@@ -136,6 +163,20 @@ function DashboardPage() {
 
     fetchDashboardStats();
   }, [user]);
+  
+  const currentLevel = useMemo(() => profile ? getLevel(profile.xp ?? 0) : 1, [profile]);
+  const xpForCurrentLevel = useMemo(() => getXpForLevel(currentLevel), [currentLevel]);
+  const xpForNextLevel = useMemo(() => getXpForLevel(currentLevel + 1), [currentLevel]);
+  const currentLevelProgress = useMemo(() => {
+    const totalXpInLevel = xpForNextLevel - xpForCurrentLevel;
+    const xpInCurrentLevel = (profile?.xp ?? 0) - xpForCurrentLevel;
+    return (xpInCurrentLevel / totalXpInLevel) * 100;
+  }, [profile, xpForCurrentLevel, xpForNextLevel]);
+  const userBadges = useMemo(() => {
+      if (!profile?.badges) return [];
+      return definedBadges.filter(b => profile.badges?.includes(b.id));
+  }, [profile]);
+
 
   const StatCard = ({
     title,
@@ -200,6 +241,56 @@ function DashboardPage() {
         </Button>
       </header>
 
+      {/* Gamification Section */}
+       <Card>
+        <CardHeader>
+          <CardTitle>Your Progress</CardTitle>
+          <CardDescription>Level up by completing your daily tasks.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {isLoading || !profile ? (
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-1/4" />
+              <Skeleton className="h-4 w-full" />
+            </div>
+          ) : (
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <span className="font-bold text-primary">Level {currentLevel}</span>
+                <span className="text-sm text-muted-foreground">
+                  {profile.xp ?? 0} / {xpForNextLevel} XP
+                </span>
+              </div>
+              <Progress value={currentLevelProgress} className="h-2" />
+            </div>
+          )}
+           <div>
+            <h4 className="text-sm font-medium mb-2">Badges</h4>
+             {isLoading || !profile ? (
+                <div className="flex gap-4">
+                    <Skeleton className="size-16 rounded-full" />
+                    <Skeleton className="size-16 rounded-full" />
+                    <Skeleton className="size-16 rounded-full" />
+                </div>
+             ) : userBadges.length > 0 ? (
+                 <div className="flex flex-wrap gap-4">
+                     {userBadges.map(badge => (
+                         <div key={badge.id} className="flex flex-col items-center text-center gap-1" title={`${badge.name}: ${badge.description}`}>
+                            <div className="flex items-center justify-center size-16 rounded-full bg-accent text-accent-foreground border-2 border-amber-400">
+                               <badge.icon className="size-8" />
+                            </div>
+                            <span className="text-xs w-16 truncate">{badge.name}</span>
+                         </div>
+                     ))}
+                 </div>
+             ) : (
+                <p className="text-sm text-muted-foreground">No badges unlocked yet. Keep logging to earn them!</p>
+             )}
+           </div>
+        </CardContent>
+      </Card>
+
+
       {/* Stats Section */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <StatCard
@@ -221,23 +312,13 @@ function DashboardPage() {
           icon={<PenSquare className="h-4 w-4 text-muted-foreground" />}
           isLoading={isLoading}
         />
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Longest Abstinence Streak</CardTitle>
-                <Flame className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-                <div className="text-2xl font-bold">
-                    {stats?.longestHabitStreak ?? 0}
-                     <span className="text-sm font-normal text-muted-foreground">
-                        {' '}days
-                    </span>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                    Streak tracking coming soon!
-                </p>
-            </CardContent>
-        </Card>
+        <StatCard
+          title="Longest Abstinence Streak"
+          value={stats?.longestHabitStreak ?? 0}
+          unit=" days"
+          icon={<Flame className="h-4 w-4 text-muted-foreground" />}
+          isLoading={isLoading}
+        />
       </div>
 
       {/* Quick Links Section */}

@@ -32,6 +32,13 @@ export type JournalEntry = {
   createdAt: Timestamp;
 };
 
+export type Badge = {
+  id: string;
+  name: string;
+  description: string;
+  icon: React.ElementType;
+};
+
 export type UserProfile = {
     uid: string;
     email: string;
@@ -39,6 +46,9 @@ export type UserProfile = {
     photoURL?: string;
     createdAt: Timestamp;
     height?: number; // in cm
+    xp?: number;
+    level?: number;
+    badges?: string[];
 }
 
 
