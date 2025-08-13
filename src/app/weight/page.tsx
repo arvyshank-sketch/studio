@@ -1,5 +1,6 @@
 'use client';
 
+import withAuth from "@/components/with-auth";
 import { useState, useMemo } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -37,6 +38,8 @@ import { TrendingUp, Trash2, Weight as WeightIcon } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useSyncedLocalStorage } from '@/hooks/use-synced-local-storage';
 import { WEIGHT_STORAGE_KEY } from '@/lib/constants';
+import { useAuth } from "@/context/auth-context";
+
 
 const weightSchema = z.object({
   weight: z.coerce.number().positive('Weight must be a positive number'),
@@ -45,8 +48,11 @@ const weightSchema = z.object({
 type WeightFormValues = z.infer<typeof weightSchema>;
 
 function WeightPage() {
+  const { user } = useAuth();
+  const storageKey = user ? `${WEIGHT_STORAGE_KEY}-${user.uid}` : WEIGHT_STORAGE_KEY;
+
   const { toast } = useToast();
-  const [entries, setEntries] = useSyncedLocalStorage<WeightEntry[]>(WEIGHT_STORAGE_KEY, []);
+  const [entries, setEntries] = useSyncedLocalStorage<WeightEntry[]>(storageKey, []);
 
   const form = useForm<WeightFormValues>({
     resolver: zodResolver(weightSchema),
@@ -245,4 +251,4 @@ function WeightPage() {
   );
 }
 
-export default WeightPage;
+export default withAuth(WeightPage);

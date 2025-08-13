@@ -1,3 +1,5 @@
+import { Timestamp } from "firebase/firestore";
+
 export type WeightEntry = {
   date: string;
   weight: number;
@@ -22,13 +24,13 @@ export type HabitEntry = {
 };
 
 export type JournalEntry = {
-  date: string;
-  studyHours: number;
-  quranPages: number;
-  expenses: number;
-  abstained: boolean;
-  streak: number; // Current streak count
+  id: string;
+  title: string;
+  content: string;
+  tags: string[];
+  createdAt: Timestamp;
 };
+
 
 export type ProgressEntry = {
   date: string;

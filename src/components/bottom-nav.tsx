@@ -9,8 +9,13 @@ import {
   Sparkles,
   BookOpenCheck,
   Utensils,
+  LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/auth-context';
+import { auth } from '@/lib/firebase';
+import { Button } from './ui/button';
+import { useRouter } from 'next/navigation';
 
 type NavLink = {
   href: string;
@@ -48,6 +53,15 @@ const links: NavLink[] = [
 
 export function BottomNav() {
   const pathname = usePathname();
+  const { user } = useAuth();
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    await auth.signOut();
+    router.push('/login');
+  };
+
+  if (!user) return null;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur-sm">
@@ -70,6 +84,13 @@ export function BottomNav() {
             </Link>
           );
         })}
+         <button
+            onClick={handleSignOut}
+            className='flex flex-col items-center justify-center gap-1 transition-colors w-full h-full text-muted-foreground hover:text-primary'
+          >
+            <LogOut className="size-6" />
+            <span className="text-xs font-medium">Sign Out</span>
+          </button>
       </nav>
     </div>
   );
