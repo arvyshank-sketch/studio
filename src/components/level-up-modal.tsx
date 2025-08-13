@@ -1,9 +1,11 @@
+
 'use client';
 
 import { useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 
@@ -37,6 +39,7 @@ export function LevelUpModal({ isOpen, onOpenChange }: LevelUpModalProps) {
         className="bg-transparent border-none shadow-none max-w-md w-full p-0 flex items-center justify-center"
         hideCloseButton={true}
       >
+        <DialogTitle className="sr-only">Level Up</DialogTitle>
         <div className="relative text-center pointer-events-none">
           <h1 
             className={cn(
