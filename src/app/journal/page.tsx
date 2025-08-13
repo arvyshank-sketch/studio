@@ -16,7 +16,6 @@ import {
   getDocs,
   runTransaction,
   onSnapshot,
-  collectionGroup,
 } from 'firebase/firestore';
 import { db }from '@/lib/firebase';
 import { useAuth }from '@/context/auth-context';
@@ -481,7 +480,6 @@ function DailyLogPage() {
       <HabitManager
           isOpen={isHabitManagerOpen}
           setIsOpen={setIsHabitManagerOpen}
-          profile={userProfile}
           habits={habits}
           setHabits={setHabits}
       />
@@ -490,3 +488,5 @@ function DailyLogPage() {
 }
 
 export default withAuth(DailyLogPage);
+
+    

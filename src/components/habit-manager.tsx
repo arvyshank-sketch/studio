@@ -2,9 +2,9 @@
 'use client';
 
 import { useState } from 'react';
-import { doc, updateDoc, arrayRemove } from 'firebase/firestore';
+import { doc, deleteDoc, collection } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { UserProfile, Habit } from '@/lib/types';
+import type { Habit } from '@/lib/types';
 import {
   Dialog,
   DialogContent,
@@ -17,39 +17,31 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Trash2 } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
-import { HabitInput } from './habit-input'; // Import the new component
+import { HabitInput } from './habit-input';
+import { useAuth } from '@/context/auth-context';
 
 interface HabitManagerProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
-  profile: UserProfile | null;
   habits: Habit[];
   setHabits: React.Dispatch<React.SetStateAction<Habit[]>>;
 }
 
-export function HabitManager({ isOpen, setIsOpen, profile, habits, setHabits }: HabitManagerProps) {
+export function HabitManager({ isOpen, setIsOpen, habits, setHabits }: HabitManagerProps) {
+  const { user } = useAuth();
   const { toast } = useToast();
-  
-  const userDocRef = profile?.uid ? doc(db, 'users', profile.uid) : null;
 
   const handleHabitAdded = (newHabit: Habit) => {
-    // This is an optimistic update handled by the parent component (DailyLog page)
+    // Optimistic update handled by the parent component (DailyLog page) via onSnapshot
     toast({ title: 'Success', description: `Habit "${newHabit.name}" added.` });
   };
 
   const deleteHabit = async (habitToDelete: Habit) => {
-    if (!userDocRef || !profile?.habits) {
-        toast({ variant: 'destructive', title: 'Error', description: 'User profile not available.' });
-        return;
+    if (!user) {
+      toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
+      return;
     }
     if (!window.confirm(`Are you sure you want to delete the habit "${habitToDelete.name}"? This cannot be undone.`)) {
-        return;
-    }
-    
-    // Find the specific habit object in the profile's habits array to ensure the correct one is removed
-    const habitToRemove = profile.habits.find(h => h.id === habitToDelete.id);
-    if (!habitToRemove) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Habit not found in profile.' });
       return;
     }
 
@@ -57,14 +49,12 @@ export function HabitManager({ isOpen, setIsOpen, profile, habits, setHabits }: 
       // Optimistically update UI first
       setHabits(prev => prev.filter(h => h.id !== habitToDelete.id));
 
-      await updateDoc(userDocRef, {
-        habits: arrayRemove(habitToRemove),
-      });
+      const habitDocRef = doc(db, 'users', user.uid, 'habits', habitToDelete.id);
+      await deleteDoc(habitDocRef);
 
       toast({ title: 'Success', description: 'Habit removed.' });
     } catch (error) {
-      // If Firestore update fails, revert the UI change
-      setHabits(prev => [...prev, habitToDelete].sort((a,b) => (b.createdAt as any) - (a.createdAt as any)));
+      // If Firestore update fails, revert the UI change by letting the snapshot listener correct it
       console.error('Error deleting habit:', error);
       toast({
         variant: 'destructive',
@@ -84,35 +74,36 @@ export function HabitManager({ isOpen, setIsOpen, profile, habits, setHabits }: 
         <div className="py-4 space-y-8">
           <div>
             <h3 className="mb-4 text-lg font-medium">Add New Habit</h3>
-            {/* Use the new HabitInput component */}
-            <HabitInput onAdded={(newHabit) => setHabits(prev => [newHabit, ...prev])} />
+            <HabitInput onAdded={handleHabitAdded} />
           </div>
 
           <div>
             <h3 className="mb-4 text-lg font-medium">Existing Habits</h3>
             <ScrollArea className="h-[200px] pr-4">
-                {habits && habits.length > 0 ? (
+              {habits && habits.length > 0 ? (
                 <div className="space-y-2">
-                    {habits.map((habit) => (
+                  {habits.map((habit) => (
                     <div key={habit.id} className="flex items-center justify-between rounded-md border p-3">
-                        <span className="text-sm truncate pr-2">{habit.name}</span>
-                        <Button variant="ghost" size="icon" onClick={() => deleteHabit(habit)} disabled={!userDocRef}>
-                            <Trash2 className="size-4 text-destructive" />
-                            <span className="sr-only">Delete habit</span>
-                        </Button>
+                      <span className="text-sm truncate pr-2">{habit.name}</span>
+                      <Button variant="ghost" size="icon" onClick={() => deleteHabit(habit)}>
+                        <Trash2 className="size-4 text-destructive" />
+                        <span className="sr-only">Delete habit</span>
+                      </Button>
                     </div>
-                    ))}
+                  ))}
                 </div>
-                ) : (
+              ) : (
                 <p className="text-sm text-muted-foreground">No habits yet. Add one above!</p>
-                )}
+              )}
             </ScrollArea>
           </div>
         </div>
-         <DialogFooter>
+        <DialogFooter>
           <Button variant="outline" onClick={() => setIsOpen(false)}>Close</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+
+    
