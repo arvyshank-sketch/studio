@@ -71,5 +71,4 @@ export type AnalyzePhysicalProgressOutput = {
     };
 };
 
-export const GenerateJournalPromptOutputSchema = z.string().describe("An insightful and concise journal prompt.").nullable();
-export type GenerateJournalPromptOutput = z.infer<typeof GenerateJournalPromptOutputSchema>;
+    

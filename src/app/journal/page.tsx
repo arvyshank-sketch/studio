@@ -230,7 +230,7 @@ function DailyLogPage() {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel className="flex items-center gap-2"><Brain /> Study Duration (minutes)</FormLabel>
-                                            <FormControl><Input type="number" {...field} /></FormControl>
+                                            <FormControl><Input type="number" placeholder="0" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -241,7 +241,7 @@ function DailyLogPage() {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel className="flex items-center gap-2"><DollarSign /> Financial Expenses</FormLabel>
-                                            <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                                            <FormControl><Input type="number" step="0.01" placeholder="0" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -326,3 +326,5 @@ function DailyLogPage() {
 }
 
 export default withAuth(DailyLogPage);
+
+    
