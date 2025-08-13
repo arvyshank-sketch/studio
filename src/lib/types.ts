@@ -15,6 +15,15 @@ export type MealEntry = {
   calories: number;
 };
 
+export type DailyLog = {
+    date: string;
+    studyDuration: number;
+    quranRead: boolean;
+    expenses: number;
+    abstained: boolean;
+    notes?: string;
+}
+
 export type JournalEntry = {
   id: string;
   title: string;

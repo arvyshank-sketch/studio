@@ -13,8 +13,6 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
-import { auth } from '@/lib/firebase';
-import { useRouter } from 'next/navigation';
 
 type NavLink = {
   href: string;
@@ -30,7 +28,7 @@ const links: NavLink[] = [
   },
   {
     href: '/journal',
-    label: 'Journal',
+    label: 'Daily Log',
     icon: BookOpenCheck,
   },
    {
@@ -53,12 +51,6 @@ const links: NavLink[] = [
 export function BottomNav() {
   const pathname = usePathname();
   const { user } = useAuth();
-  const router = useRouter();
-
-  const handleSignOut = async () => {
-    await auth.signOut();
-    router.push('/login');
-  };
 
   if (!user) return null;
 

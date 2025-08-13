@@ -1,9 +1,10 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if the user is authenticated
+    // Helper function to check if a user is authenticated
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -13,18 +14,22 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
 
+    // Rules for the 'users' collection
     match /users/{userId} {
+      // Any authenticated user can create their own user document
+      allow create: if isAuthenticated() && isOwner(userId);
+      // Only the owner can read, update, or delete their user document
       allow read, update, delete: if isAuthenticated() && isOwner(userId);
-      allow create: if isAuthenticated();
-      
-      // Allow users to manage their own journal entries
-      match /journals/{journalId} {
-        allow read, write, delete: if isAuthenticated() && isOwner(userId);
+
+      // Rules for subcollections of a user document
+      match /{collection}/{docId} {
+        // Only the owner can manage documents in their subcollections
+        allow read, write, create, delete: if isAuthenticated() && isOwner(userId);
       }
       
-      // Allow users to manage their own weight entries
-      match /weightEntries/{entryId} {
-        allow read, write, delete: if isAuthenticated() && isOwner(userId);
+      // Rules for dailyLogs
+      match /dailyLogs/{logId} {
+          allow read, write, create: if isAuthenticated() && isOwner(userId);
       }
     }
   }
