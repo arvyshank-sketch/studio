@@ -9,13 +9,8 @@ import {
   Sparkles,
   BookOpenCheck,
   Utensils,
-  LogOut
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/context/auth-context';
-import { useRouter } from 'next/navigation';
-import { Button } from './ui/button';
-import { useToast } from '@/hooks/use-toast';
 
 type NavLink = {
   href: string;
@@ -53,27 +48,6 @@ const links: NavLink[] = [
 
 export function BottomNav() {
   const pathname = usePathname();
-  const { user, signOut } = useAuth();
-  const router = useRouter();
-  const { toast } = useToast();
-
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      router.push('/login');
-      toast({
-        title: 'Signed Out',
-        description: 'You have been successfully signed out.',
-      });
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Sign Out Failed',
-        description: 'There was an error signing out. Please try again.',
-      });
-    }
-  };
-
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur-sm">
@@ -96,17 +70,6 @@ export function BottomNav() {
             </Link>
           );
         })}
-        {user && (
-           <button
-            onClick={handleSignOut}
-            className={cn(
-                'flex flex-col items-center justify-center gap-1 transition-colors w-full h-full text-muted-foreground hover:text-primary'
-            )}
-           >
-              <LogOut className="size-6" />
-              <span className="text-xs font-medium">Sign Out</span>
-           </button>
-        )}
       </nav>
     </div>
   );

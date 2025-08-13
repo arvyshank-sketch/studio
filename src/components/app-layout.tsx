@@ -4,11 +4,9 @@ import type { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { BottomNav } from './bottom-nav';
 
-const noNavRoutes = ['/login', '/signup'];
-
 export function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const showNav = !noNavRoutes.includes(pathname);
+  const showNav = !['/login', '/signup'].includes(pathname);
 
   return (
     <div className="flex flex-col h-screen">

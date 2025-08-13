@@ -36,8 +36,6 @@ import {
 import { Flame } from 'lucide-react';
 import { JOURNAL_STORAGE_KEY } from '@/lib/constants';
 import { useSyncedLocalStorage } from '@/hooks/use-synced-local-storage';
-import withAuth from '@/components/with-auth';
-import { useAuth } from '@/context/auth-context';
 
 const journalSchema = z.object({
   studyHours: z.coerce.number().min(0),
@@ -50,9 +48,7 @@ type JournalFormValues = z.infer<typeof journalSchema>;
 
 function JournalPage() {
   const { toast } = useToast();
-  const { user } = useAuth();
-  const storageKey = user ? `${JOURNAL_STORAGE_KEY}-${user.uid}` : JOURNAL_STORAGE_KEY;
-  const [entries, setEntries] = useSyncedLocalStorage<JournalEntry[]>(storageKey, []);
+  const [entries, setEntries] = useSyncedLocalStorage<JournalEntry[]>(JOURNAL_STORAGE_KEY, []);
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   const form = useForm<JournalFormValues>({
@@ -258,4 +254,4 @@ function JournalPage() {
   );
 }
 
-export default withAuth(JournalPage);
+export default JournalPage;
