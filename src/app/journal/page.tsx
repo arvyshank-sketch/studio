@@ -92,6 +92,7 @@ function DailyLogPage() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [isHabitManagerOpen, setIsHabitManagerOpen] = useState(false);
+  const [questCompletedToday, setQuestCompletedToday] = useState(false);
   
   const today = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
   
@@ -212,6 +213,17 @@ function DailyLogPage() {
                   acc[habit.id] = logData.customHabits?.[habit.id] || false;
                   return acc;
               }, {} as Record<string, boolean>)
+
+              const isQuestCompleted = (logData.studyDuration ?? 0) > 0 ||
+                                     (logData.quranPagesRead ?? 0) > 0 ||
+                                     (logData.expenses ?? 0) > 0 ||
+                                     logData.abstained ||
+                                     Object.values(logData.customHabits ?? {}).some(Boolean);
+              
+              if (isQuestCompleted) {
+                setQuestCompletedToday(true);
+              }
+
               form.reset({...logData, customHabits: customHabitsWithDefaults });
             }
         }
@@ -307,10 +319,16 @@ function DailyLogPage() {
       const newStreak = await calculateStreak();
       setStreak(newStreak);
 
-      toast({
-        title: '[Congratulations! You have completed the Daily Quest.]',
-        duration: 3000,
-      });
+      if (!questCompletedToday) {
+        toast({
+          title: '[Congratulations! You have completed the Daily Quest.]',
+          duration: 3000,
+        });
+        setQuestCompletedToday(true);
+      } else {
+         toast({ title: 'Log Updated' });
+      }
+
 
       if (penaltyToastDescription) {
           toast({
@@ -507,9 +525,9 @@ function DailyLogPage() {
                                     </FormItem>
                                     )}
                                 />
-                                <Button type="submit" disabled={isSubmitting}>
+                                <Button type="submit" disabled={isSubmitting || questCompletedToday}>
                                     {isSubmitting ? <Loader2 className="mr-2 animate-spin" /> : <CheckCircle />}
-                                    Complete Quest
+                                    {questCompletedToday ? 'Quest Completed' : 'Complete Quest'}
                                 </Button>
                             </div>
                         )}
