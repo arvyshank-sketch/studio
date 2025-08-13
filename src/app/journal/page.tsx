@@ -30,9 +30,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Flame, Plus, X } from 'lucide-react';
+import { Flame, Sparkles, Loader2, HeartHandshake } from 'lucide-react';
 import { JOURNAL_STORAGE_KEY } from '@/lib/constants';
 import { useSyncedLocalStorage } from '@/hooks/use-synced-local-storage';
+import { generateMotivation } from '@/ai/flows/generate-motivation-flow';
 
 const journalSchema = z.object({
   studyHours: z.coerce.number().min(0),
@@ -65,6 +66,50 @@ const DateSelector = ({ selectedDate, setSelectedDate }: { selectedDate: Date, s
       ))}
     </div>
   );
+};
+
+const MotivationCard = () => {
+    const [motivation, setMotivation] = useState<{title: string, quote: string} | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchMotivation = async () => {
+            setIsLoading(true);
+            try {
+                const result = await generateMotivation();
+                setMotivation(result);
+            } catch (error) {
+                console.error("Failed to fetch motivation:", error);
+                setMotivation({title: "Keep Going", quote: "Believe in yourself and all that you are. Know that there is something inside you that is greater than any obstacle."});
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchMotivation();
+    }, []);
+
+    return (
+        <Card className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-xl">
+            <CardContent className="p-6 flex items-center justify-between">
+                {isLoading ? (
+                    <div className="w-full flex items-center justify-center gap-2">
+                        <Loader2 className="size-6 animate-spin" />
+                        <span className="text-lg">Generating inspiration...</span>
+                    </div>
+                ) : (
+                    <>
+                        <div>
+                            <h2 className="text-2xl font-bold">{motivation?.title}</h2>
+                            <p className="text-md mt-2 italic">"{motivation?.quote}"</p>
+                        </div>
+                        <div className="text-6xl opacity-30">
+                           <Sparkles className="w-16 h-16" />
+                        </div>
+                    </>
+                )}
+            </CardContent>
+        </Card>
+    );
 };
 
 
@@ -115,7 +160,13 @@ export default function JournalPage() {
              // If looking at a past date, calculate streak up to that date
              expectedDate = selectedDate;
          } else {
-            return 0;
+            const yesterday = subDays(new Date(), 1);
+            const yesterdayEntry = entries.find(e => isSameDay(new Date(e.date), yesterday));
+            if(yesterdayEntry?.abstained) {
+                // continue streak from yesterday
+            } else {
+                return 0;
+            }
          }
     }
 
@@ -126,8 +177,9 @@ export default function JournalPage() {
 
     let currentStreak = 0;
     let lastDate = new Date();
-
-    if (!sortedAbstinenceDays.some(d => isSameDay(d, lastDate))) {
+    
+    const todayIsTracked = sortedAbstinenceDays.some(d => isSameDay(d, lastDate));
+    if (!todayIsTracked) {
         lastDate = subDays(lastDate, 1);
     }
     
@@ -175,10 +227,8 @@ export default function JournalPage() {
       }
       return updatedEntries;
     });
-    toast({
-      title: 'Journal Saved',
-      description: "Your journal entry has been saved successfully.",
-    });
+    
+    // We don't show a toast on every auto-save
   };
 
   const formValues = form.watch();
@@ -200,18 +250,7 @@ export default function JournalPage() {
 
       {isClient && <DateSelector selectedDate={selectedDate} setSelectedDate={setSelectedDate} />}
       
-      <Card className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-xl">
-        <CardContent className="p-6 flex items-center justify-between">
-            <div>
-                <h2 className="text-2xl font-bold">100 ways to</h2>
-                <h1 className="text-4xl font-extrabold tracking-tight">LOVE MYSELF</h1>
-                <Button className="mt-4 bg-yellow-400 text-purple-900 hover:bg-yellow-500">Let's Go!</Button>
-            </div>
-            <div className="text-6xl">
-                <span role="img" aria-label="hugging face emoji">🤗</span>
-            </div>
-        </CardContent>
-      </Card>
+      {isClient && <MotivationCard />}
       
       <div className="space-y-4">
         <FormProvider {...form}>
@@ -349,12 +388,6 @@ export default function JournalPage() {
             </form>
         </FormProvider>
       </div>
-
-       <div className="fixed bottom-24 right-6 z-50">
-         <Button className="rounded-full w-16 h-16 shadow-lg">
-           <Plus className="w-8 h-8" />
-         </Button>
-       </div>
     </div>
   );
 }
