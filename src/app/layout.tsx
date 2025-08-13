@@ -1,14 +1,16 @@
+
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Rajdhani } from 'next/font/google';
 import './globals.css';
 import { AppLayout } from '@/components/app-layout';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthContextProvider } from '@/context/auth-context';
 import { ThemeProvider } from '@/components/theme-provider';
 
-const inter = Inter({ 
+const rajdhani = Rajdhani({ 
   subsets: ['latin'], 
-  variable: '--font-inter',
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-rajdhani',
   display: 'swap',
 });
 
@@ -23,7 +25,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} h-full`} suppressHydrationWarning>
+    <html lang="en" className={`${rajdhani.variable} h-full`} suppressHydrationWarning>
       <body className="h-full font-body antialiased bg-background">
         <ThemeProvider
             attribute="class"

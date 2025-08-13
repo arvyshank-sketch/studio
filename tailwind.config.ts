@@ -1,3 +1,4 @@
+
 import type {Config} from 'tailwindcss';
 
 const config = {
@@ -18,7 +19,7 @@ const config = {
     },
     extend: {
       fontFamily: {
-        body: ['var(--font-inter)', 'sans-serif'],
+        body: ['var(--font-rajdhani)', 'sans-serif'],
       },
       colors: {
         border: 'hsl(var(--border))',
