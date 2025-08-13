@@ -198,10 +198,10 @@ function DashboardPage() {
                       title: 'Unexpected Quest',
                       description: 'A sudden mission has appeared. Complete it by the end of the day or face a penalty.',
                       exercises: [
-                          { name: 'Push-ups', goal: 100, completed: false },
-                          { name: 'Sit-ups', goal: 100, completed: false },
-                          { name: 'Squats', goal: 100, completed: false },
-                          { name: 'Running', goal: 10, completed: false } // in km
+                          { name: 'Push-ups', goal: 25, completed: false },
+                          { name: 'Sit-ups', goal: 35, completed: false },
+                          { name: 'Squats', goal: 40, completed: false },
+                          { name: 'Running', goal: 2, completed: false } // in km
                       ],
                       isCompleted: false,
                       generatedAt: serverTimestamp(),
@@ -699,5 +699,3 @@ function DashboardPage() {
 }
 
 export default withAuth(DashboardPage);
-
-    
