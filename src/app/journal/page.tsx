@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useForm, type SubmitHandler, FormProvider } from 'react-hook-form';
+import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format, isSameDay } from 'date-fns';
@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/select';
 import { Flame } from 'lucide-react';
 import { JOURNAL_STORAGE_KEY } from '@/lib/constants';
+import { useSyncedLocalStorage } from '@/hooks/use-synced-local-storage';
 
 const journalSchema = z.object({
   studyHours: z.coerce.number().min(0),
@@ -47,8 +48,7 @@ type JournalFormValues = z.infer<typeof journalSchema>;
 
 export default function JournalPage() {
   const { toast } = useToast();
-  const [entries, setEntries] = useState<JournalEntry[]>([]);
-  const [isClient, setIsClient] = useState(false);
+  const [entries, setEntries] = useSyncedLocalStorage<JournalEntry[]>(JOURNAL_STORAGE_KEY, []);
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   const form = useForm<JournalFormValues>({
@@ -60,25 +60,22 @@ export default function JournalPage() {
       abstained: false,
     },
   });
+  
+  const selectedDateString = useMemo(() => format(selectedDate, 'yyyy-MM-dd'), [selectedDate]);
 
   useEffect(() => {
-    setIsClient(true);
-    try {
-      const storedEntries = localStorage.getItem(JOURNAL_STORAGE_KEY);
-      if (storedEntries) {
-        const parsedEntries = JSON.parse(storedEntries);
-        setEntries(parsedEntries);
-        const todayEntry = parsedEntries.find((e: JournalEntry) => e.date === format(selectedDate, 'yyyy-MM-dd'));
-        if (todayEntry) {
-          form.reset(todayEntry);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load journal entries', error);
+    const todayEntry = entries.find((e) => e.date === selectedDateString);
+    if (todayEntry) {
+      form.reset(todayEntry);
+    } else {
+        form.reset({
+            studyHours: 0,
+            quranPages: 0,
+            expenses: 0,
+            abstained: false,
+        });
     }
-  }, [isClient, form, selectedDate]);
-
-  const selectedDateString = useMemo(() => format(selectedDate, 'yyyy-MM-dd'), [selectedDate]);
+  }, [selectedDateString, entries, form]);
 
   const calculateStreak = useCallback(() => {
     const sortedAbstinenceDays = entries
@@ -112,24 +109,16 @@ export default function JournalPage() {
   const currentStreak = useMemo(() => calculateStreak(), [calculateStreak]);
 
   const onSubmit: SubmitHandler<JournalFormValues> = (data) => {
-    const newEntry = { date: selectedDateString, ...data, streak: 0 }; // streak is recalculated
-    const updatedEntries = entries.filter((e) => e.date !== selectedDateString);
-    setEntries([...updatedEntries, newEntry]);
+    const newEntry: JournalEntry = { date: selectedDateString, ...data, streak: 0 };
+    setEntries((prev) => {
+      const updatedEntries = prev.filter((e) => e.date !== selectedDateString);
+      return [...updatedEntries, newEntry];
+    });
     
-    try {
-        localStorage.setItem(JOURNAL_STORAGE_KEY, JSON.stringify([...updatedEntries, newEntry]));
-        toast({
-            title: "Journal Saved",
-            description: "Your entry for today has been saved.",
-        });
-    } catch (error) {
-        console.error('Failed to save journal entry', error);
-        toast({
-            variant: 'destructive',
-            title: "Save Failed",
-            description: "Could not save your journal entry.",
-        });
-    }
+    toast({
+        title: "Journal Saved",
+        description: `Your entry for ${format(selectedDate, "MMMM d")} has been saved.`,
+    });
   };
 
   return (
@@ -160,7 +149,7 @@ export default function JournalPage() {
                                      </div>
                                     <div>
                                         <FormLabel className="text-lg font-semibold">Self-Discipline</FormLabel>
-                                        <FormDescription>Current Streak: {isClient ? currentStreak : 0} days</FormDescription>
+                                        <FormDescription>Current Streak: {currentStreak} days</FormDescription>
                                     </div>
                                 </div>
                                 <FormControl>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -11,7 +11,6 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -36,6 +35,8 @@ import {
 } from 'recharts';
 import { TrendingUp, Trash2, Weight as WeightIcon } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useSyncedLocalStorage } from '@/hooks/use-synced-local-storage';
+import { WEIGHT_STORAGE_KEY } from '@/lib/constants';
 
 const weightSchema = z.object({
   weight: z.coerce.number().positive('Weight must be a positive number'),
@@ -43,34 +44,9 @@ const weightSchema = z.object({
 
 type WeightFormValues = z.infer<typeof weightSchema>;
 
-const WEIGHT_STORAGE_KEY = 'synergy-weight';
-
 export default function WeightPage() {
   const { toast } = useToast();
-  const [entries, setEntries] = useState<WeightEntry[]>([]);
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-    try {
-      const storedEntries = localStorage.getItem(WEIGHT_STORAGE_KEY);
-      if (storedEntries) {
-        setEntries(JSON.parse(storedEntries));
-      }
-    } catch (error) {
-      console.error('Failed to load weight entries from local storage', error);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (isClient) {
-      try {
-        localStorage.setItem(WEIGHT_STORAGE_KEY, JSON.stringify(entries));
-      } catch (error) {
-        console.error('Failed to save weight entries to local storage', error);
-      }
-    }
-  }, [entries, isClient]);
+  const [entries, setEntries] = useSyncedLocalStorage<WeightEntry[]>(WEIGHT_STORAGE_KEY, []);
 
   const form = useForm<WeightFormValues>({
     resolver: zodResolver(weightSchema),
@@ -171,7 +147,7 @@ export default function WeightPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {isClient && sortedEntries.length > 0 ? (
+                    {sortedEntries.length > 0 ? (
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -217,7 +193,7 @@ export default function WeightPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="h-[300px] w-full pr-8">
-            {isClient && chartData.length > 0 ? (
+            {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData}>
                   <defs>

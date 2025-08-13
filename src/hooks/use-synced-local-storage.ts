@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 
-export function useSyncedLocalStorage<T>(key: string, defaultValue: T): [T, (value: T | ((val: T) => T)) => void] {
+// Custom hook to keep state in sync with localStorage and across tabs/windows.
+export function useSyncedLocalStorage<T>(key: string, defaultValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
   const [value, setValue] = useState<T>(() => {
+    // This part runs only on the initial render on the client.
     if (typeof window === 'undefined') {
       return defaultValue;
     }
@@ -14,24 +16,26 @@ export function useSyncedLocalStorage<T>(key: string, defaultValue: T): [T, (val
     }
   });
 
+  // This effect updates localStorage when the state changes.
   useEffect(() => {
-    try {
-      const item = JSON.stringify(value);
-      window.localStorage.setItem(key, item);
-      window.dispatchEvent(new StorageEvent('storage', { key, newValue: item }));
-    } catch (error) {
-      console.error(`Error setting localStorage key “${key}”:`, error);
+    if (typeof window !== 'undefined') {
+        try {
+            window.localStorage.setItem(key, JSON.stringify(value));
+        } catch (error) {
+            console.error(`Error setting localStorage key “${key}”:`, error);
+        }
     }
   }, [key, value]);
-
+  
+  // This effect listens for changes in other tabs.
   const handleStorageChange = useCallback((event: StorageEvent) => {
-    if (event.key === key && event.newValue) {
-      try {
-        setValue(JSON.parse(event.newValue));
-      } catch (error) {
-        console.error(`Error parsing storage event for key “${key}”:`, error);
+      if (event.key === key && event.newValue) {
+          try {
+              setValue(JSON.parse(event.newValue));
+          } catch(e) {
+              console.error(e)
+          }
       }
-    }
   }, [key]);
 
   useEffect(() => {
@@ -40,6 +44,7 @@ export function useSyncedLocalStorage<T>(key: string, defaultValue: T): [T, (val
       window.removeEventListener('storage', handleStorageChange);
     };
   }, [handleStorageChange]);
+
 
   return [value, setValue];
 }

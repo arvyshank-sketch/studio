@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -35,12 +35,14 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { analyzePhysicalProgress, type AnalyzePhysicalProgressOutput } from '@/ai/flows/analyze-physical-progress';
-import { Upload, Sparkles, Loader2, Dumbbell, Utensils, Target, TrendingUp, Percent } from 'lucide-react';
+import { Upload, Sparkles, Loader2, Dumbbell, Utensils, Target, TrendingUp } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import type { ProgressEntry } from '@/lib/types';
+import { useSyncedLocalStorage } from '@/hooks/use-synced-local-storage';
+import { PROGRESS_HISTORY_KEY } from '@/lib/constants';
 
 
 const progressSchema = z.object({
@@ -53,37 +55,12 @@ const progressSchema = z.object({
 
 type ProgressFormValues = z.infer<typeof progressSchema>;
 
-const PROGRESS_HISTORY_KEY = 'synergy-progress-history';
-
 export default function ProgressPage() {
   const { toast } = useToast();
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<AnalyzePhysicalProgressOutput | null>(null);
-  const [history, setHistory] = useState<ProgressEntry[]>([]);
+  const [history, setHistory] = useSyncedLocalStorage<ProgressEntry[]>(PROGRESS_HISTORY_KEY, []);
   const [isLoading, setIsLoading] = useState(false);
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-    try {
-      const storedHistory = localStorage.getItem(PROGRESS_HISTORY_KEY);
-      if (storedHistory) {
-        setHistory(JSON.parse(storedHistory));
-      }
-    } catch (error) {
-      console.error('Failed to load progress history from local storage', error);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (isClient) {
-      try {
-        localStorage.setItem(PROGRESS_HISTORY_KEY, JSON.stringify(history));
-      } catch (error) {
-        console.error('Failed to save progress history to local storage', error);
-      }
-    }
-  }, [history, isClient]);
 
   const form = useForm<ProgressFormValues>({
     resolver: zodResolver(progressSchema),
@@ -378,7 +355,7 @@ export default function ProgressPage() {
                 </CardDescription>
             </CardHeader>
             <CardContent className="h-[300px] w-full pr-8">
-            {isClient && sortedHistory.length > 1 ? (
+            {sortedHistory.length > 1 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={sortedHistory}>
                   <defs>

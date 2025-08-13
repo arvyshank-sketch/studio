@@ -7,8 +7,8 @@ import {
   type LucideIcon,
   TrendingUp,
   Sparkles,
-  User,
   BookOpenCheck,
+  Utensils,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -26,8 +26,13 @@ const links: NavLink[] = [
   },
   {
     href: '/journal',
-    label: 'Routine',
+    label: 'Journal',
     icon: BookOpenCheck,
+  },
+   {
+    href: '/diet',
+    label: 'Diet',
+    icon: Utensils,
   },
   {
     href: '/progress',
@@ -36,7 +41,7 @@ const links: NavLink[] = [
   },
   {
     href: '/weight',
-    label: 'Stats',
+    label: 'Weight',
     icon: TrendingUp,
   },
 ];
