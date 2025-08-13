@@ -6,7 +6,7 @@ import withAuth from "@/components/with-auth";
 import { useAuth } from "@/context/auth-context";
 import { auth, db } from '@/lib/firebase';
 import { doc, onSnapshot, collection } from 'firebase/firestore';
-import type { UserProfile, UserReward, Reward } from '@/lib/types';
+import type { UserProfile, UserReward, Reward, Rank } from '@/lib/types';
 import { getLevel, getXpForLevel, XP_REWARDS, getRank } from '@/lib/gamification';
 import { ALL_REWARDS } from '@/lib/rewards';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -67,6 +67,13 @@ const Commandment = ({ text, xp, isPenalty = false }: { text: string; xp: number
         </span>
     </li>
 );
+
+const RankInfo = ({ rank, level, color }: { rank: string; level: string; color: string }) => (
+    <li className="flex justify-between items-center">
+        <span className={cn('font-semibold', color)}>{rank}</span>
+        <span className="text-blue-200">{level}</span>
+    </li>
+)
 
 function ProfilePage() {
   const { user } = useAuth();
@@ -281,6 +288,18 @@ function ProfilePage() {
                 >
                     <h3 className="text-center text-2xl font-bold mb-6 text-blue-300">System Commandments</h3>
                     <div className="space-y-6">
+                        <div>
+                            <h4 className="font-semibold mb-3 text-lg text-blue-300 border-b border-blue-400/30 pb-1">Rank System</h4>
+                            <ul className="space-y-2 text-blue-200">
+                                <RankInfo rank="E-Rank" level="Level 1-9" color="text-gray-400" />
+                                <RankInfo rank="D-Rank" level="Level 10-19" color="text-green-400" />
+                                <RankInfo rank="C-Rank" level="Level 20-29" color="text-cyan-400" />
+                                <RankInfo rank="B-Rank" level="Level 30-39" color="text-blue-400" />
+                                <RankInfo rank="A-Rank" level="Level 40-49" color="text-red-400" />
+                                <RankInfo rank="S-Rank" level="Level 50-99" color="text-purple-400" />
+                                <RankInfo rank="Monarch" level="Level 100+" color="text-yellow-400" />
+                            </ul>
+                        </div>
                         <div>
                             <h4 className="font-semibold mb-3 text-lg text-blue-300 border-b border-blue-400/30 pb-1">XP Rewards</h4>
                             <ul className="space-y-2 text-blue-200">
