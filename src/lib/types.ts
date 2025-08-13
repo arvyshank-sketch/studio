@@ -1,6 +1,5 @@
 
 import { Timestamp } from "firebase/firestore";
-import { z } from 'genkit';
 
 export type WeightEntry = {
   id: string;
@@ -63,33 +62,9 @@ export type UserProfile = {
     habits?: Habit[];
 }
 
-
-export type ProgressEntry = {
-  date: string;
-  bodyFat: number;
-  photoDataUri: string;
-  analysis: AnalyzePhysicalProgressOutput;
-};
-
 export type DashboardStats = {
   weeklyWeightChange: number;
   weeklyJournalEntries: number;
   longestHabitStreak: number;
   calories: number;
-};
-
-// Copied from src/ai/flows/analyze-physical-progress.ts to avoid circular dependency
-export type AnalyzePhysicalProgressOutput = {
-    physiqueAssessment: string;
-    muscleGroups: {
-        chest: string;
-        arms: string;
-        back: string;
-        abs: string;
-    };
-    areasForImprovement: string[];
-    recommendations: {
-        workout: string;
-        diet: string;
-    };
 };

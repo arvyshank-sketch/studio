@@ -6,7 +6,6 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   type LucideIcon,
-  Sparkles,
   BookOpenCheck,
   Utensils,
   Weight,
@@ -37,11 +36,6 @@ const links: NavLink[] = [
     icon: Utensils,
   },
   {
-    href: '/progress',
-    label: 'AI Coach',
-    icon: Sparkles,
-  },
-  {
     href: '/weight',
     label: 'Weight',
     icon: Weight,
@@ -56,7 +50,7 @@ export function BottomNav() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/80 backdrop-blur-sm">
-      <nav className="grid h-16 grid-cols-5 items-center justify-around">
+      <nav className="grid h-16 grid-cols-4 items-center justify-around">
         {links.map((link) => {
           const isActive = pathname === link.href;
           return (
