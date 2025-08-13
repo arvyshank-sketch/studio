@@ -7,7 +7,7 @@ import { useAuth } from "@/context/auth-context";
 import { auth, db } from '@/lib/firebase';
 import { doc, onSnapshot, collection } from 'firebase/firestore';
 import type { UserProfile, UserReward, Reward } from '@/lib/types';
-import { getLevel, getXpForLevel, XP_REWARDS } from '@/lib/gamification';
+import { getLevel, getXpForLevel, XP_REWARDS, getRank } from '@/lib/gamification';
 import { ALL_REWARDS } from '@/lib/rewards';
 import { format, formatDistanceToNow } from 'date-fns';
 import {
@@ -87,13 +87,13 @@ function ProfilePage() {
       if (doc.exists()) {
         setProfile(doc.data() as UserProfile);
       }
+      setIsLoading(false);
     });
     
     const rewardsRef = collection(db, 'users', user.uid, 'userRewards');
     const unsubRewards = onSnapshot(rewardsRef, (snapshot) => {
       const rewardsData = snapshot.docs.map(doc => doc.data() as UserReward);
       setUnlockedRewards(rewardsData);
-      setIsLoading(false);
     });
 
     return () => {
@@ -108,6 +108,7 @@ function ProfilePage() {
   };
 
   const currentLevel = useMemo(() => profile ? getLevel(profile.xp ?? 0) : 1, [profile]);
+  const currentRank = useMemo(() => profile ? getRank(profile.level ?? 1) : getRank(1), [profile]);
   const xpForCurrentLevel = useMemo(() => getXpForLevel(currentLevel), [currentLevel]);
   const xpForNextLevel = useMemo(() => getXpForLevel(currentLevel + 1), [currentLevel]);
   const currentLevelProgress = useMemo(() => {
@@ -128,10 +129,10 @@ function ProfilePage() {
       }).sort((a,b) => (b.unlocked ? 1 : 0) - (a.unlocked ? 1 : 0));
   }, [unlockedRewards]);
 
-  const InfoRow = ({ label, value }: { label: string; value: string | undefined }) => (
+  const InfoRow = ({ label, value, valueClassName }: { label: string; value: string | undefined, valueClassName?: string }) => (
       <div className="flex justify-between items-center py-3 border-b border-border/50">
           <dt className="text-muted-foreground">{label}</dt>
-          <dd className="text-foreground font-medium">{isLoading ? <Skeleton className="h-5 w-32" /> : value}</dd>
+          <dd className={cn("text-foreground font-medium", valueClassName)}>{isLoading ? <Skeleton className="h-5 w-32" /> : value}</dd>
       </div>
   );
 
@@ -191,6 +192,7 @@ function ProfilePage() {
                 <dl>
                   <InfoRow label="UID" value={profile?.uid} />
                   <InfoRow label="Joined System" value={profile?.createdAt ? format(profile.createdAt.toDate(), 'PPP') : 'N/A'} />
+                  <InfoRow label="Rank" value={currentRank.name} valueClassName={currentRank.color} />
                   <div>
                     <div className="flex justify-between items-baseline pt-4 mb-2">
                         <span className="font-bold text-lg text-primary">Level {currentLevel}</span>
@@ -268,7 +270,7 @@ function ProfilePage() {
             <div 
                 className="p-8 rounded-lg text-white"
                 style={{
-                    backgroundImage: 'url(/system-commandments-bg.jpg)',
+                    backgroundImage: 'url(https://i.pinimg.com/originals/c8/30/3c/c8303c46131362d29486c905805c3c0f.gif)',
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                 }}

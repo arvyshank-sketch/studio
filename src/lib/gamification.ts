@@ -1,5 +1,5 @@
 
-import type { UserProfile, DailyLog, Badge, UnexpectedQuest, Habit } from './types';
+import type { UserProfile, DailyLog, Badge, UnexpectedQuest, Habit, Rank } from './types';
 import { parseISO, differenceInCalendarDays, format, subDays } from 'date-fns';
 import { Book, Calendar, Flame, Target } from 'lucide-react';
 import { collection, query, where, getDocs, doc, Transaction, getDoc } from 'firebase/firestore';
@@ -51,6 +51,27 @@ export const getLevel = (xp: number): number => {
   }
   return level;
 };
+
+// --- Rank System ---
+const RANKS: Rank[] = [
+    { name: 'E-Rank', color: 'text-gray-400' },
+    { name: 'D-Rank', color: 'text-green-400' },
+    { name: 'C-Rank', color: 'text-cyan-400' },
+    { name: 'B-Rank', color: 'text-blue-400' },
+    { name: 'A-Rank', color: 'text-red-400' },
+    { name: 'S-Rank', color: 'text-purple-400' },
+    { name: 'Monarch', color: 'text-yellow-400' },
+];
+
+export const getRank = (level: number): Rank => {
+    if (level < 10) return RANKS[0]; // E-Rank
+    if (level < 20) return RANKS[1]; // D-Rank
+    if (level < 30) return RANKS[2]; // C-Rank
+    if (level < 40) return RANKS[3]; // B-Rank
+    if (level < 50) return RANKS[4]; // A-Rank
+    if (level < 100) return RANKS[5]; // S-Rank
+    return RANKS[6]; // Monarch
+}
 
 
 // --- Badge Definitions ---

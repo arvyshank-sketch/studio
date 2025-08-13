@@ -62,6 +62,10 @@ export type UserReward = Reward & {
     unlockedAt: Timestamp | any;
 }
 
+export type Rank = {
+    name: string;
+    color: string;
+};
 
 export type UserProfile = {
     uid: string;
@@ -99,5 +103,3 @@ export type UnexpectedQuest = {
     isCompleted: boolean;
     generatedAt: Timestamp | any;
 }
-
-    
