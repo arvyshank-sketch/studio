@@ -125,7 +125,7 @@ export function HabitManager({ isOpen, setIsOpen, profile }: HabitManagerProps) 
           <div>
             <h3 className="mb-4 text-lg font-medium">Add New Habit</h3>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-start gap-2">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-center gap-2">
                 <FormField
                   control={form.control}
                   name="name"
