@@ -29,57 +29,59 @@ const generateUsername = (email: string) => {
     return `${username}${randomSuffix}`;
 };
 
-const DEFAULT_AVATAR_URL = 'https://placehold.co/128x128.png?text=SJW';
+const DEFAULT_AVATAR_URL = 'https://i.pinimg.com/736x/a4/b4/3c/a4b43ce5f8b6f3d1b7a3e74e47190dce.jpg';
+
+// This function runs in the background to create a user document in Firestore.
+// It doesn't block the UI from rendering.
+const createUserDocument = async (user: User) => {
+  const userDocRef = doc(db, 'users', user.uid);
+  const userDocSnap = await getDoc(userDocRef);
+
+  if (!userDocSnap.exists()) {
+    // If the document doesn't exist, create it.
+    const newDisplayName = user.displayName || generateUsername(user.email!);
+    const photoURL = user.photoURL || DEFAULT_AVATAR_URL;
+    try {
+      // We can update the Firebase Auth profile and Firestore doc in parallel.
+      const profileUpdatePromise = updateProfile(user, { displayName: newDisplayName, photoURL: photoURL });
+      const docCreatePromise = setDoc(userDocRef, {
+        uid: user.uid,
+        email: user.email,
+        displayName: newDisplayName,
+        photoURL: photoURL,
+        createdAt: serverTimestamp(),
+        level: 1,
+        xp: 0,
+        badges: [],
+      });
+      await Promise.all([profileUpdatePromise, docCreatePromise]);
+    } catch (error) {
+      console.error("Error creating new user entry:", error);
+    }
+  }
+};
+
 
 export const AuthContextProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const handleUser = async (user: User) => {
-      const userDocRef = doc(db, 'users', user.uid);
-      const userDocSnap = await getDoc(userDocRef);
-
-      if (!userDocSnap.exists()) {
-        const newDisplayName = user.displayName || generateUsername(user.email!);
-        const photoURL = user.photoURL || DEFAULT_AVATAR_URL;
-        try {
-          if (!user.displayName || !user.photoURL) {
-            await updateProfile(user, { displayName: newDisplayName, photoURL: photoURL });
-          }
-          await setDoc(userDocRef, {
-            uid: user.uid,
-            email: user.email,
-            displayName: newDisplayName,
-            photoURL: photoURL,
-            createdAt: serverTimestamp(),
-            level: 1,
-            xp: 0,
-            badges: [],
-          });
-          await user.reload();
-          setUser(auth.currentUser);
-        } catch (error) {
-          console.error("Error creating new user entry:", error);
-        }
-      }
-    };
-    
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+      
+      // If a user is logged in, ensure their Firestore document exists.
+      // This check runs in the background and does not delay app startup.
       if (currentUser) {
-        handleUser(currentUser).finally(() => {
-          setUser(currentUser);
-          setLoading(false);
-        });
-      } else {
-        setUser(null);
-        setLoading(false);
+        createUserDocument(currentUser);
       }
     });
 
     return () => unsubscribe();
   }, []);
 
+  // Show a loader only during the initial auth check.
   if (loading) {
     return (
       <div className="flex h-screen w-screen items-center justify-center">
@@ -103,5 +105,7 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    
 
     

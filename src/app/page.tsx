@@ -265,9 +265,6 @@ function DashboardPage() {
       const journalSnap = await getDocs(journalQuery);
       const weeklyLogs = journalSnap.docs.map(doc => doc.data() as DailyLog);
 
-      const allLogsQuery = query(journalRef, orderBy('date', 'desc'));
-      const allLogsSnap = await getDocs(allLogsQuery);
-      
       let longestStreak = 0;
 
       setStats({
@@ -706,6 +703,8 @@ function DashboardPage() {
 }
 
 export default withAuth(DashboardPage);
+
+    
 
     
 
