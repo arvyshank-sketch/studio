@@ -139,7 +139,9 @@ function WeightPage() {
     setIsLoading(true);
     const q = query(weightCollectionRef, orderBy('date', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-        const entriesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as WeightEntry));
+        const entriesData = snapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() } as WeightEntry))
+          .filter(entry => entry.date); // Filter out entries where date is not yet set
         setEntries(entriesData);
         setIsLoading(false);
       }, (error) => {
