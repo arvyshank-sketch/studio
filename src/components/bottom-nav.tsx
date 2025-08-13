@@ -73,7 +73,7 @@ export function BottomNav() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur-sm">
-      <nav className="grid h-16 grid-cols-7 items-center justify-around">
+      <nav className="grid h-16 grid-cols-6 items-center justify-around">
         {links.map((link) => {
           const isActive = pathname === link.href;
           return (
@@ -88,17 +88,10 @@ export function BottomNav() {
               )}
             >
               <link.icon className="size-6" />
-              <span className="text-xs font-medium">{link.label}</span>
+              <span className="text-xs font-medium sr-only sm:not-sr-only">{link.label}</span>
             </Link>
           );
         })}
-         <button
-            onClick={handleSignOut}
-            className='flex flex-col items-center justify-center gap-1 transition-colors w-full h-full text-muted-foreground hover:text-primary'
-          >
-            <LogOut className="size-6" />
-            <span className="text-xs font-medium">Sign Out</span>
-          </button>
       </nav>
     </div>
   );
