@@ -5,10 +5,11 @@ import { useState, useEffect, useMemo } from 'react';
 import withAuth from "@/components/with-auth";
 import { useAuth } from "@/context/auth-context";
 import { auth, db } from '@/lib/firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
-import type { UserProfile } from '@/lib/types';
+import { doc, onSnapshot, collection } from 'firebase/firestore';
+import type { UserProfile, UserReward, Reward } from '@/lib/types';
 import { getLevel, getXpForLevel, XP_REWARDS } from '@/lib/gamification';
-import { format } from 'date-fns';
+import { ALL_REWARDS } from '@/lib/rewards';
+import { format, formatDistanceToNow } from 'date-fns';
 import {
   Card,
   CardContent,
@@ -21,10 +22,40 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { User, Shield, CheckCircle, XCircle, LogOut } from 'lucide-react';
+import { User, Shield, CheckCircle, XCircle, LogOut, Award, MessageSquare, Star, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
+import { Badge } from '@/components/ui/badge';
+
+
+const rarityStyles = {
+  common: {
+    badge: 'bg-muted/80 text-muted-foreground/80 border-transparent',
+    card: 'border-muted/20',
+    glow: '',
+  },
+  rare: {
+    badge: 'bg-blue-900/50 text-blue-300 border-blue-700/50',
+    card: 'border-blue-700/60',
+    glow: 'shadow-lg shadow-blue-900/50',
+  },
+  legendary: {
+    badge: 'bg-yellow-900/50 text-yellow-300 border-yellow-600/50',
+    card: 'border-yellow-600/60',
+    glow: 'shadow-2xl shadow-yellow-800/60',
+  },
+};
+
+const getRewardIcon = (type: string) => {
+    switch (type) {
+        case 'title': return <Award className="size-8 text-foreground/80" />;
+        case 'badge': return <Star className="size-8 text-foreground/80" />;
+        case 'quote': return <MessageSquare className="size-8 text-foreground/80" />;
+        default: return <Award className="size-8 text-foreground/80" />;
+    }
+}
+
 
 const Commandment = ({ text, xp, isPenalty = false }: { text: string; xp: number; isPenalty?: boolean }) => (
     <li className="flex justify-between items-center">
@@ -42,19 +73,34 @@ function ProfilePage() {
   const { user } = useAuth();
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [unlockedRewards, setUnlockedRewards] = useState<UserReward[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+        setIsLoading(false);
+        return;
+    };
     setIsLoading(true);
+
     const userDocRef = doc(db, 'users', user.uid);
-    const unsubscribe = onSnapshot(userDocRef, (doc) => {
+    const unsubProfile = onSnapshot(userDocRef, (doc) => {
       if (doc.exists()) {
         setProfile(doc.data() as UserProfile);
       }
+    });
+    
+    const rewardsRef = collection(db, 'users', user.uid, 'userRewards');
+    const unsubRewards = onSnapshot(rewardsRef, (snapshot) => {
+      const rewardsData = snapshot.docs.map(doc => doc.data() as UserReward);
+      setUnlockedRewards(rewardsData);
       setIsLoading(false);
     });
-    return () => unsubscribe();
+
+    return () => {
+        unsubProfile();
+        unsubRewards();
+    };
   }, [user]);
 
   const handleSignOut = async () => {
@@ -71,6 +117,18 @@ function ProfilePage() {
     const xpInCurrentLevel = profile.xp - xpForCurrentLevel;
     return totalXpInLevel > 0 ? (xpInCurrentLevel / totalXpInLevel) * 100 : 0;
   }, [profile, xpForCurrentLevel, xpForNextLevel]);
+
+  const combinedRewards = useMemo(() => {
+      return ALL_REWARDS.map(reward => {
+        const unlockedVersion = unlockedRewards.find(ur => ur.id === reward.id);
+        return {
+          ...reward,
+          unlocked: !!unlockedVersion,
+          unlockedAt: unlockedVersion?.unlockedAt,
+        };
+      }).sort((a,b) => (b.unlocked ? 1 : 0) - (a.unlocked ? 1 : 0));
+  }, [unlockedRewards]);
+
 
   const InfoRow = ({ label, value }: { label: string; value: string | undefined }) => (
       <div className="flex justify-between items-center py-3 border-b border-border/50">
@@ -113,7 +171,7 @@ function ProfilePage() {
           <TabsTrigger value="rules"><Shield className="mr-2" />System Commandments</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="info" className="mt-6">
+        <TabsContent value="info" className="mt-6 space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Profile Details</CardTitle>
@@ -148,6 +206,58 @@ function ProfilePage() {
                     Sign Out
                 </Button>
             </CardFooter>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>My Rewards</CardTitle>
+              <CardDescription>A collection of all rewards you've unlocked on your journey.</CardDescription>
+            </CardHeader>
+            <CardContent>
+               {isLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                        <Card key={i}><CardContent className="p-4"><Skeleton className="h-24 w-full" /></CardContent></Card>
+                    ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {combinedRewards.map(reward => {
+                    const styles = rarityStyles[reward.rarity];
+                    return (
+                      <Card
+                        key={reward.id}
+                        className={cn(
+                          'flex flex-col justify-between transition-all duration-300 h-full',
+                          reward.unlocked ? styles.card : 'border-dashed border-muted/20 bg-card/50',
+                          reward.unlocked ? styles.glow : ''
+                        )}
+                      >
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-3">
+                            {reward.unlocked ? getRewardIcon(reward.type) : <Lock className="size-8 text-muted-foreground/50" />}
+                            <span className={cn("text-base", !reward.unlocked && 'text-muted-foreground/50')}>{reward.name}</span>
+                          </CardTitle>
+                          <CardDescription className={cn("text-xs",!reward.unlocked && 'text-muted-foreground/30')}>
+                            {reward.description}
+                          </CardDescription>
+                        </CardHeader>
+                        <CardFooter className="flex justify-between items-center">
+                           <Badge className={cn('capitalize', reward.unlocked ? styles.badge : 'bg-muted/30 text-muted-foreground/50 border-transparent')}>
+                                {reward.rarity}
+                            </Badge>
+                            {reward.unlockedAt && (
+                                 <p className="text-xs text-muted-foreground">
+                                   Unlocked {formatDistanceToNow(reward.unlockedAt.toDate(), { addSuffix: true })}
+                                 </p>
+                            )}
+                        </CardFooter>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
           </Card>
         </TabsContent>
 
