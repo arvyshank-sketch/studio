@@ -66,7 +66,7 @@ export function HabitManager({ isOpen, setIsOpen, habits, setHabits }: HabitMana
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-[425px] rounded-2xl">
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Manage Habits</DialogTitle>
           <DialogDescription>Add new habits or remove existing ones from your daily log.</DialogDescription>

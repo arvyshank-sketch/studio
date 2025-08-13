@@ -21,17 +21,13 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { User, Shield, CheckCircle, XCircle, LogOut, Award, MessageSquare, Star, Lock, Brush } from 'lucide-react';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { User, Shield, CheckCircle, XCircle, LogOut, Award, MessageSquare, Star, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import SafeImage from '@/components/SafeImage';
-import { useTheme } from '@/hooks/use-theme';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Separator } from '@/components/ui/separator';
 
 const rarityStyles = {
   common: {
@@ -75,7 +71,6 @@ const Commandment = ({ text, xp, isPenalty = false }: { text: string; xp: number
 function ProfilePage() {
   const { user } = useAuth();
   const router = useRouter();
-  const { theme, setTheme } = useTheme();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [unlockedRewards, setUnlockedRewards] = useState<UserReward[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -150,7 +145,6 @@ function ProfilePage() {
                     width={80}
                     height={80}
                     className="h-20 w-20 object-cover"
-                    fallbackSrc="https://i.pinimg.com/736x/a4/b4/3c/a4b43ce5f8b6f3d1b7a3e74e47190dce.jpg"
                     data-ai-hint="sung jin woo cool"
                 />
                 <AvatarFallback className="text-2xl bg-muted">
@@ -208,24 +202,6 @@ function ProfilePage() {
                   </div>
                 </dl>
               )}
-               <Separator className="my-6" />
-               <div className="space-y-4">
-                 <Label className="flex items-center gap-2 text-base"><Brush /> System Theme</Label>
-                  <RadioGroup
-                    value={theme}
-                    onValueChange={setTheme}
-                    className="flex flex-col space-y-1"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="system" id="system" />
-                      <Label htmlFor="system">Solo Leveling System</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="classic" id="classic" />
-                      <Label htmlFor="classic">Classic</Label>
-                    </div>
-                  </RadioGroup>
-               </div>
             </CardContent>
             <CardFooter>
                 <Button variant="outline" onClick={handleSignOut} className="w-full">
