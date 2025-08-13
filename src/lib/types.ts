@@ -11,13 +11,14 @@ export type MealEntry = {
 };
 
 export type Habit = {
-  id: number;
+  id: string;
   name: string;
+  icon: React.ReactNode;
 };
 
 export type HabitEntry = {
   date: string; // "yyyy-MM-dd"
-  completedHabitIds: number[];
+  completedHabitIds: string[];
 };
 
 export type JournalEntry = {
