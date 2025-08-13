@@ -19,6 +19,8 @@ export const XP_REWARDS = {
   WEIGHT_GAIN: 100,
   UNEXPECTED_QUEST: 150,
   UNEXPECTED_QUEST_PENALTY: -50,
+  DAILY_QUEST_MISSED_PENALTY: -50,
+  CALORIE_LOG_MISSED_PENALTY: -50,
 };
 
 /**
@@ -145,6 +147,7 @@ interface ProcessGamificationArgs {
     userId: string;
     transaction: Transaction;
     customXp?: number;
+    checkForPenalties?: boolean;
 }
 
 
@@ -158,11 +161,17 @@ export const processGamification = async ({
     newLog, 
     userId,
     transaction,
-    customXp
+    customXp,
+    checkForPenalties = false,
 }: ProcessGamificationArgs) => {
-  // --- 1. Calculate XP for the new log ---
-  let earnedXp = customXp || 0;
+  let earnedXp = 0;
+  let penaltyXp = 0;
 
+  // --- 1. Calculate XP for the new log ---
+  if (customXp) {
+    earnedXp += customXp;
+  }
+  
   if (Object.keys(newLog).length > 0) {
       if (newLog.studyDuration && newLog.studyDuration > 0) {
         earnedXp += (newLog.studyDuration / 0.5) * XP_REWARDS.STUDY_PER_30_MIN;
@@ -179,24 +188,43 @@ export const processGamification = async ({
       }
   }
 
-  // --- 2. Check for Unexpected Quest Penalty ---
-  const yesterdayStr = format(subDays(new Date(), 1), 'yyyy-MM-dd');
-  const penaltyQuestRef = doc(db, 'users', userId, 'unexpectedQuests', yesterdayStr);
-  const penaltyQuestSnap = await transaction.get(penaltyQuestRef);
-  
-  if (penaltyQuestSnap.exists()) {
-      const quest = penaltyQuestSnap.data() as UnexpectedQuest;
-      if (!quest.isCompleted) {
-          earnedXp += XP_REWARDS.UNEXPECTED_QUEST_PENALTY;
-          // Mark as completed to avoid double penalty
-          transaction.update(penaltyQuestRef, { isCompleted: true });
+  // --- 2. Check for Penalties from the Previous Day ---
+  if (checkForPenalties) {
+      const yesterdayStr = format(subDays(new Date(), 1), 'yyyy-MM-dd');
+      
+      // Penalty for failed Unexpected Quest
+      const penaltyQuestRef = doc(db, 'users', userId, 'unexpectedQuests', yesterdayStr);
+      const penaltyQuestSnap = await transaction.get(penaltyQuestRef);
+      if (penaltyQuestSnap.exists()) {
+          const quest = penaltyQuestSnap.data() as UnexpectedQuest;
+          if (!quest.isCompleted) {
+              penaltyXp += XP_REWARDS.UNEXPECTED_QUEST_PENALTY;
+              transaction.update(penaltyQuestRef, { isCompleted: true }); // Mark as penalized to avoid double penalty
+          }
+      }
+
+      // Penalty for missed logs
+      const yesterdayLogRef = doc(db, 'users', userId, 'dailyLogs', yesterdayStr);
+      const yesterdayLogSnap = await transaction.get(yesterdayLogRef);
+      if (!yesterdayLogSnap.exists()) {
+          penaltyXp += XP_REWARDS.DAILY_QUEST_MISSED_PENALTY;
+          penaltyXp += XP_REWARDS.CALORIE_LOG_MISSED_PENALTY;
+      } else {
+          const yesterdayLog = yesterdayLogSnap.data() as DailyLog;
+          const questLogged = (yesterdayLog.studyDuration ?? 0) > 0 || (yesterdayLog.quranPagesRead ?? 0) > 0 || yesterdayLog.abstained || Object.values(yesterdayLog.customHabits ?? {}).some(Boolean);
+          if (!questLogged) {
+              penaltyXp += XP_REWARDS.DAILY_QUEST_MISSED_PENALTY;
+          }
+          if (!yesterdayLog.caloriesLogged) {
+              penaltyXp += XP_REWARDS.CALORIE_LOG_MISSED_PENALTY;
+          }
       }
   }
 
-
   let currentXp = userProfile.xp ?? 0;
   let currentLevel = userProfile.level ?? 1;
-  let newXp = currentXp + earnedXp;
+  let newXp = currentXp + earnedXp + penaltyXp;
+  if (newXp < 0) newXp = 0; // Don't let XP go negative
 
   // --- 3. Check for Level Up ---
   let leveledUp = false;
@@ -235,5 +263,5 @@ export const processGamification = async ({
     badges: Array.from(currentBadges),
   };
 
-  return { updatedProfile, leveledUp };
+  return { updatedProfile, leveledUp, penaltyXp };
 };

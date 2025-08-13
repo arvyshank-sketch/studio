@@ -248,6 +248,8 @@ function DailyLogPage() {
     };
 
     try {
+      let penaltyToastDescription = '';
+
       await runTransaction(db, async (transaction) => {
         const userProfileSnap = await transaction.get(userDocRef);
         if (!userProfileSnap.exists()) {
@@ -255,7 +257,6 @@ function DailyLogPage() {
         }
         const profile = userProfileSnap.data() as UserProfile;
         
-        // Note: The gamification logic needs *all* logs for some badge checks.
         const allLogsQuery = query(logsCollectionRef!, orderBy('date', 'desc'));
         const allLogsSnap = await getDocs(allLogsQuery);
         const allLogs = allLogsSnap.docs.map(doc => doc.data() as DailyLog);
@@ -265,12 +266,17 @@ function DailyLogPage() {
             allLogs: allLogs, 
             newLog: logData,
             userId: user.uid,
-            transaction: transaction
+            transaction: transaction,
+            checkForPenalties: true, // Enable penalty check
         });
+
+        if (gamificationResult.penaltyXp && gamificationResult.penaltyXp < 0) {
+            penaltyToastDescription = `You lost ${Math.abs(gamificationResult.penaltyXp)} XP for skipping yesterday's tasks.`;
+        }
+
         transaction.set(docRef, logData, { merge: true });
         transaction.update(userDocRef, gamificationResult.updatedProfile);
         
-        // Grant a reward on level up
         if (gamificationResult.leveledUp) {
             const newReward = await grantRandomReward(user.uid, transaction);
             if(newReward) {
@@ -290,6 +296,15 @@ function DailyLogPage() {
         description: "Your progress, XP, and badges have been updated.",
         action: <div className="p-2 bg-green-500 text-white rounded-full"><CheckCircle size={24} /></div>,
       });
+
+      if (penaltyToastDescription) {
+          toast({
+              variant: 'destructive',
+              title: 'Penalty Applied!',
+              description: penaltyToastDescription,
+          });
+      }
+
     } catch (error) {
       console.error('Error saving log:', error);
       toast({
@@ -503,7 +518,3 @@ function DailyLogPage() {
 }
 
 export default withAuth(DailyLogPage);
-
-    
-
-    

@@ -38,7 +38,7 @@ import { format } from 'date-fns';
 import { MEALS_STORAGE_KEY } from '@/lib/constants';
 import { useSyncedLocalStorage } from '@/hooks/use-synced-local-storage';
 import { useAuth } from "@/context/auth-context";
-import { runTransaction, doc, getDoc } from "firebase/firestore";
+import { runTransaction, doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { processGamification, XP_REWARDS } from "@/lib/gamification";
 import { useToast } from "@/hooks/use-toast";
@@ -87,17 +87,25 @@ function DietPage() {
                 if (!userProfileSnap.exists()) {
                     throw new Error("User profile not found!");
                 }
+                
                 const profile = userProfileSnap.data() as UserProfile;
                 const dailyLog = (dailyLogSnap.exists() ? dailyLogSnap.data() : {}) as Partial<DailyLog>;
-
+                
                 // Avoid giving XP twice if the log was already marked
                 if (dailyLog.caloriesLogged) return;
 
-                const updatedProfile = processGamification(profile, [], { caloriesLogged: true });
-
+                const { updatedProfile } = await processGamification({
+                    userProfile: profile,
+                    allLogs: [], // No need to check for badges here
+                    newLog: { caloriesLogged: true },
+                    userId: user.uid,
+                    transaction: transaction
+                });
+                
                 transaction.update(userDocRef, updatedProfile);
                 transaction.set(dailyLogRef, { caloriesLogged: true, date: today }, { merge: true });
             });
+            
             toast({
                 title: `+${XP_REWARDS.CALORIE_LOGGED} XP!`,
                 description: "You've earned points for logging your meal.",
