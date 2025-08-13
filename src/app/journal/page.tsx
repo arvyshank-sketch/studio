@@ -200,8 +200,11 @@ function DailyLogPage() {
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
               const logData = docSnap.data() as z.infer<typeof logSchema>;
-              // Ensure customHabits has defaults for all existing habits
-              const customHabitsWithDefaults = habits.reduce((acc, habit) => {
+              // Get the latest habits to ensure form is up to date
+              const latestHabitsSnap = await getDocs(query(habitsCollectionRef, orderBy('createdAt', 'desc')));
+              const latestHabits = latestHabitsSnap.docs.map(d => ({...d.data(), id: d.id})) as Habit[];
+
+              const customHabitsWithDefaults = latestHabits.reduce((acc, habit) => {
                   acc[habit.id] = logData.customHabits?.[habit.id] || false;
                   return acc;
               }, {} as Record<string, boolean>)
@@ -228,7 +231,7 @@ function DailyLogPage() {
         unsubProfile();
         unsubHabits();
     };
-  }, [userDocRef, habitsCollectionRef, docRef, toast, calculateStreak, form, habits]);
+  }, [userDocRef, habitsCollectionRef, docRef, toast, calculateStreak, form]);
 
   const handleFormSubmit = async (data: z.infer<typeof logSchema>) => {
     if (!docRef || !userDocRef) return;
