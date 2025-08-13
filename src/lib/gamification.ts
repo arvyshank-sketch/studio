@@ -139,6 +139,9 @@ const badgeChecks: { [key: string]: (ctx: BadgeCheckContext) => boolean } = {
  * @returns An updated user profile object.
  */
 export const processGamification = (userProfile: UserProfile, allLogs: DailyLog[], newLog: Partial<DailyLog>, customXp?: number): Partial<UserProfile> => {
+  // XP gain temporarily disabled
+  return {};
+
   // --- 1. Calculate XP for the new log ---
   let earnedXp = customXp || 0;
 
