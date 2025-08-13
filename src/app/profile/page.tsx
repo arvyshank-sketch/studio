@@ -21,7 +21,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { User, Shield, CheckCircle, XCircle, LogOut, Award, MessageSquare, Star, Lock, Brush } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -143,24 +143,20 @@ function ProfilePage() {
   return (
     <div className="p-4 md:p-8">
         <header className="mb-8 flex items-center gap-4">
-            {isLoading ? (
-                <Skeleton className="size-20 rounded-full" />
-            ) : (
-                <Avatar className="size-20 border-2 border-primary overflow-hidden">
-                     <SafeImage
-                         src={profile?.photoURL}
-                         alt={profile?.displayName ?? "User Avatar"}
-                         width={80}
-                         height={80}
-                         className="h-20 w-20 object-cover"
-                         fallbackSrc="https://i.pinimg.com/736x/a4/b4/3c/a4b43ce5f8b6f3d1b7a3e74e47190dce.jpg"
-                         data-ai-hint="sung jin woo cool"
-                     />
-                    <AvatarFallback className="text-2xl bg-muted">
-                        {profile?.displayName?.charAt(0)?.toUpperCase() || "?"}
-                    </AvatarFallback>
-                </Avatar>
-            )}
+            <Avatar className="size-20 border-2 border-primary overflow-hidden">
+                <SafeImage
+                    src={profile?.photoURL}
+                    alt={profile?.displayName ?? "User Avatar"}
+                    width={80}
+                    height={80}
+                    className="h-20 w-20 object-cover"
+                    fallbackSrc="https://i.pinimg.com/736x/a4/b4/3c/a4b43ce5f8b6f3d1b7a3e74e47190dce.jpg"
+                    data-ai-hint="sung jin woo cool"
+                />
+                <AvatarFallback className="text-2xl bg-muted">
+                    {profile?.displayName?.charAt(0)?.toUpperCase() || "?"}
+                </AvatarFallback>
+            </Avatar>
             <div>
             {isLoading ? (
                 <div className="space-y-2">
@@ -217,7 +213,7 @@ function ProfilePage() {
                  <Label className="flex items-center gap-2 text-base"><Brush /> System Theme</Label>
                   <RadioGroup
                     value={theme}
-                    onValueChange={(value) => setTheme(value === 'system' ? 'system' : 'classic')}
+                    onValueChange={setTheme}
                     className="flex flex-col space-y-1"
                   >
                     <div className="flex items-center space-x-2">
