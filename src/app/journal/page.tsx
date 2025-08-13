@@ -1,10 +1,10 @@
 
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { useState, useEffect, useMemo, useCallback }from 'react';
+import { useForm, Controller }from 'react-hook-form';
+import { zodResolver }from '@hookform/resolvers/zod';
+import { z }from 'zod';
 import {
   doc,
   setDoc,
@@ -15,13 +15,13 @@ import {
   limit,
   getDocs,
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { useAuth } from '@/context/auth-context';
+import { db }from '@/lib/firebase';
+import { useAuth }from '@/context/auth-context';
 import withAuth from '@/components/with-auth';
-import type { DailyLog } from '@/lib/types';
-import { format, subDays, parse } from 'date-fns';
+import type { DailyLog }from '@/lib/types';
+import { format, subDays, parse }from 'date-fns';
 
-import { Button } from '@/components/ui/button';
+import { Button }from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -38,17 +38,17 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast';
-import { Switch } from '@/components/ui/switch';
-import { Loader2, BookOpen, Brain, DollarSign, HeartHandshake, CheckCircle, Flame } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Slider } from '@/components/ui/slider';
+import { Input }from '@/components/ui/input';
+import { Textarea }from '@/components/ui/textarea';
+import { useToast }from '@/hooks/use-toast';
+import { Switch }from '@/components/ui/switch';
+import { Loader2, BookOpen, Brain, DollarSign, HeartHandshake, CheckCircle, Flame }from 'lucide-react';
+import { Skeleton }from '@/components/ui/skeleton';
+import { Slider }from '@/components/ui/slider';
 
 const logSchema = z.object({
-  studyDuration: z.coerce.number().min(0).max(480, "Study duration cannot exceed 480 minutes (8 hours)").optional(),
-  quranRead: z.boolean().default(false),
+  studyDuration: z.coerce.number().min(0).max(8, "Study duration cannot exceed 8 hours").optional(),
+  quranPagesRead: z.coerce.number().min(0, 'Must be a positive number').optional(),
   expenses: z.coerce.number().min(0, 'Must be a positive number').optional(),
   abstained: z.boolean().default(false),
   notes: z.string().optional(),
@@ -69,7 +69,7 @@ function DailyLogPage() {
     resolver: zodResolver(logSchema),
     defaultValues: {
       studyDuration: 0,
-      quranRead: false,
+      quranPagesRead: 0,
       expenses: 0,
       abstained: false,
       notes: '',
@@ -169,6 +169,7 @@ function DailyLogPage() {
       ...data,
       date: today,
       studyDuration: data.studyDuration || 0,
+      quranPagesRead: data.quranPagesRead || 0,
       expenses: data.expenses || 0,
     }
 
@@ -234,13 +235,15 @@ function DailyLogPage() {
                                         <FormItem>
                                             <FormLabel className="flex items-center justify-between">
                                                 <span className='flex items-center gap-2'><Brain /> Study Duration</span>
-                                                <span className="text-sm font-normal text-muted-foreground">{field.value} minutes</span>
+                                                <span className="text-sm font-normal text-muted-foreground">
+                                                  {field.value?.toFixed(2)} hours
+                                                </span>
                                             </FormLabel>
                                             <FormControl>
                                                 <Slider
                                                     min={0}
-                                                    max={480}
-                                                    step={15}
+                                                    max={8}
+                                                    step={0.25}
                                                     defaultValue={[field.value ?? 0]}
                                                     onValueChange={(value) => field.onChange(value[0])}
                                                 />
@@ -265,17 +268,13 @@ function DailyLogPage() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <FormField
                                         control={form.control}
-                                        name="quranRead"
+                                        name="quranPagesRead"
                                         render={({ field }) => (
-                                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                                            <div className="space-y-0.5">
-                                            <FormLabel className="text-base flex items-center gap-2"><BookOpen /> Qur'an Read</FormLabel>
-                                            <FormDescription>Did you read Qur'an today?</FormDescription>
-                                            </div>
-                                            <FormControl>
-                                            <Switch checked={field.value} onCheckedChange={field.onChange} />
-                                            </FormControl>
-                                        </FormItem>
+                                          <FormItem>
+                                              <FormLabel className="flex items-center gap-2"><BookOpen /> Qur'an Pages Read</FormLabel>
+                                              <FormControl><Input type="number" step="1" placeholder="0" {...field} /></FormControl>
+                                              <FormMessage />
+                                          </FormItem>
                                         )}
                                     />
                                     <FormField
