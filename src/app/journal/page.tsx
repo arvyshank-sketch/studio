@@ -428,7 +428,10 @@ function DailyLogPage() {
                                                         step="0.01" 
                                                         placeholder="0" 
                                                         {...restField}
-                                                        onChange={e => onChange(e.target.valueAsNumber || undefined)}
+                                                        onChange={e => {
+                                                            const value = e.target.value;
+                                                            onChange(value === '' ? undefined : parseFloat(value));
+                                                        }}
                                                         value={restField.value ?? ''}
                                                     />
                                                 </FormControl>
