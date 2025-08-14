@@ -55,7 +55,10 @@ import { HabitManager } from '@/components/habit-manager';
 const logSchema = z.object({
   studyDuration: z.coerce.number().min(0).optional(),
   quranPagesRead: z.coerce.number().min(0).optional(),
-  expenses: z.coerce.number().min(0, 'Must be a positive number').max(1000000, "Please enter a reasonable expense amount.").optional(),
+  expenses: z.preprocess(
+    (val) => (val === '' ? undefined : Number(val)),
+    z.number().min(0, 'Must be a positive number').max(1000000, "Please enter a reasonable expense amount.").optional()
+  ),
   abstained: z.boolean().default(false),
   notes: z.string().optional(),
   customHabits: z.record(z.boolean()).optional(),
@@ -101,7 +104,7 @@ function DailyLogPage() {
     defaultValues: {
         studyDuration: 0,
         quranPagesRead: 0,
-        expenses: 0,
+        expenses: undefined,
         abstained: false,
         notes: '',
         customHabits: {},
@@ -437,20 +440,16 @@ function DailyLogPage() {
                                     <FormField
                                         control={form.control}
                                         name="expenses"
-                                        render={({ field: { onChange, ...restField } }) => (
+                                        render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel className="flex items-center gap-2"><DollarSign /> Financial Expenses</FormLabel>
                                                 <FormControl>
-                                                    <Input 
-                                                        type="number" 
-                                                        step="0.01" 
-                                                        placeholder="0" 
-                                                        {...restField}
-                                                        onChange={e => {
-                                                            const value = e.target.value;
-                                                            onChange(value === '' ? undefined : parseFloat(value));
-                                                        }}
-                                                        value={restField.value ?? ''}
+                                                    <Input
+                                                        type="number"
+                                                        step="0.01"
+                                                        placeholder="0"
+                                                        {...field}
+                                                        value={field.value ?? ''}
                                                     />
                                                 </FormControl>
                                                 <FormMessage />
@@ -525,7 +524,7 @@ function DailyLogPage() {
                                     </FormItem>
                                     )}
                                 />
-                                <Button type="submit" disabled={isSubmitting || questCompletedToday}>
+                                <Button type="submit" disabled={isSubmitting || questCompletedToday} onClick={() => handleFormSubmit(form.getValues())}>
                                     {isSubmitting ? <Loader2 className="mr-2 animate-spin" /> : <CheckCircle />}
                                     {questCompletedToday ? 'Quest Completed' : 'Complete Quest'}
                                 </Button>
@@ -563,5 +562,3 @@ function DailyLogPage() {
 }
 
 export default withAuth(DailyLogPage);
-
-    
