@@ -12,6 +12,7 @@ import { onAuthStateChanged, type User, updateProfile } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
+import { getRank } from '@/lib/gamification';
 
 interface AuthContextType {
   user: User | null;
@@ -41,6 +42,7 @@ const createUserDocument = async (user: User) => {
     // If the document doesn't exist, create it.
     const newDisplayName = user.displayName || generateUsername(user.email!);
     const photoURL = user.photoURL || DEFAULT_AVATAR_URL;
+    const initialLevel = 1;
     try {
       // We can update the Firebase Auth profile and Firestore doc in parallel.
       const profileUpdatePromise = updateProfile(user, { displayName: newDisplayName, photoURL: photoURL });
@@ -50,8 +52,9 @@ const createUserDocument = async (user: User) => {
         displayName: newDisplayName,
         photoURL: photoURL,
         createdAt: serverTimestamp(),
-        level: 1,
+        level: initialLevel,
         xp: 0,
+        rank: getRank(initialLevel).name,
         badges: [],
       });
       await Promise.all([profileUpdatePromise, docCreatePromise]);

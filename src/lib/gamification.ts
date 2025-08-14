@@ -289,13 +289,14 @@ export const processGamification = async ({
 
   // --- 3. Check for Level Up ---
   let leveledUp = false;
-  let xpForNextLevel = getXpForLevel(currentLevel + 1);
+  const previousLevel = getLevel(currentXp);
+  const newLevel = getLevel(newXp);
   
-  while (newXp >= xpForNextLevel) {
-    currentLevel++;
+  if (newLevel > previousLevel) {
     leveledUp = true;
-    xpForNextLevel = getXpForLevel(currentLevel + 1);
+    currentLevel = newLevel;
   }
+
 
   // --- 4. Check for new badges ---
   const currentBadges = new Set(userProfile.badges ?? []);
@@ -321,6 +322,7 @@ export const processGamification = async ({
   const updatedProfile: Partial<UserProfile> = {
     xp: newXp,
     level: currentLevel,
+    rank: getRank(currentLevel).name,
     badges: Array.from(currentBadges),
   };
 

@@ -76,6 +76,7 @@ export type UserProfile = {
     height?: number; // in cm
     xp?: number;
     level?: number;
+    rank?: string;
     badges?: string[];
     habits?: Habit[];
     questWeek?: number;
