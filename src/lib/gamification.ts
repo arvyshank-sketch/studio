@@ -234,15 +234,6 @@ export const processGamification = async ({
               }
           });
       }
-      
-      // Calculate penalty for uncompleted habits only when submitting the quest
-      if (habits.length > 0) {
-        habits.forEach(habit => {
-            if (!newLog.customHabits?.[habit.id]) {
-                habitPenaltyXp += XP_REWARDS.CUSTOM_HABIT_PENALTY;
-            }
-        });
-      }
   }
 
   // --- 2. Check for Penalties from the Previous Day ---
@@ -266,14 +257,27 @@ export const processGamification = async ({
       if (!yesterdayLogSnap.exists()) {
           penaltyXp += XP_REWARDS.DAILY_QUEST_MISSED_PENALTY;
           penaltyXp += XP_REWARDS.CALORIE_LOG_MISSED_PENALTY;
+          if(habits.length > 0) {
+            habitPenaltyXp += habits.length * XP_REWARDS.CUSTOM_HABIT_PENALTY;
+          }
       } else {
           const yesterdayLog = yesterdayLogSnap.data() as DailyLog;
-          const questLogged = (yesterdayLog.studyDuration ?? 0) > 0 || (yesterdayLog.quranPagesRead ?? 0) > 0 || yesterdayLog.abstained || Object.values(yesterdayLog.customHabits ?? {}).some(Boolean);
+          const questLogged = (yesterdayLog.studyDuration ?? 0) > 0 || 
+                              (yesterdayLog.quranPagesRead ?? 0) > 0 || 
+                              yesterdayLog.abstained || 
+                              Object.values(yesterdayLog.customHabits ?? {}).some(Boolean);
           if (!questLogged) {
               penaltyXp += XP_REWARDS.DAILY_QUEST_MISSED_PENALTY;
           }
           if (!yesterdayLog.caloriesLogged) {
               penaltyXp += XP_REWARDS.CALORIE_LOG_MISSED_PENALTY;
+          }
+          if (habits.length > 0) {
+            habits.forEach(habit => {
+                if (!yesterdayLog.customHabits?.[habit.id]) {
+                    habitPenaltyXp += XP_REWARDS.CUSTOM_HABIT_PENALTY;
+                }
+            });
           }
       }
   }
