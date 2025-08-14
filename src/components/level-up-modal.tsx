@@ -15,16 +15,9 @@ interface LevelUpModalProps {
 }
 
 export function LevelUpModal({ isOpen, onOpenChange }: LevelUpModalProps) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     if (isOpen) {
-      // Create audio element only on the client
-      if (!audioRef.current) {
-        audioRef.current = new Audio('/level-up.mp3');
-      }
-      audioRef.current?.play().catch(e => console.error("Audio play failed:", e));
-
       const timer = setTimeout(() => {
         onOpenChange(false);
       }, 2500); // Auto-close after 2.5 seconds

@@ -17,15 +17,9 @@ interface RankUpModalProps {
 }
 
 export function RankUpModal({ isOpen, onOpenChange, rankChangeInfo }: RankUpModalProps) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     if (isOpen) {
-      if (!audioRef.current) {
-        audioRef.current = new Audio('/level-up.mp3'); // Re-using level up sound
-      }
-      audioRef.current?.play().catch(e => console.error("Audio play failed:", e));
-
       const timer = setTimeout(() => {
         onOpenChange(false);
       }, 4000); // Auto-close after 4 seconds
