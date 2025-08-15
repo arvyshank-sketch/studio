@@ -67,6 +67,13 @@ export type Rank = {
     color: string;
 };
 
+export type XpEntry = {
+    id: string;
+    amount: number;
+    reason: string;
+    date: Timestamp;
+}
+
 export type UserProfile = {
     uid: string;
     email: string;

@@ -2,7 +2,7 @@
 import type { UserProfile, DailyLog, Badge, UnexpectedQuest, Habit, Rank } from './types';
 import { parseISO, differenceInCalendarDays, format, subDays } from 'date-fns';
 import { Book, Calendar, Flame, Target } from 'lucide-react';
-import { collection, query, where, getDocs, doc, Transaction, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, Transaction, getDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase';
 
 // --- XP & Leveling Configuration ---
@@ -194,35 +194,55 @@ export const processGamification = async ({
   let penaltyXp = 0;
   let habitPenaltyXp = 0;
 
+  const xpHistoryRef = collection(db, 'users', userId, 'xpHistory');
+
+  const logXp = (amount: number, reason: string) => {
+    if (amount === 0) return;
+    const newEntryRef = doc(xpHistoryRef);
+    transaction.set(newEntryRef, {
+      amount,
+      reason,
+      date: serverTimestamp(),
+    });
+  }
+
   const prev = previousLog || {};
 
   // --- 1. Calculate XP for the new log ---
   if (customXp) {
     earnedXp += customXp;
+    logXp(customXp, "Gained weight");
   }
   
   if (Object.keys(newLog).length > 0) {
       const studyDiff = (newLog.studyDuration ?? 0) - (prev.studyDuration ?? 0);
       if (studyDiff > 0) {
-        earnedXp += (studyDiff / 0.5) * XP_REWARDS.STUDY_PER_30_MIN;
+        const xp = (studyDiff / 0.5) * XP_REWARDS.STUDY_PER_30_MIN;
+        earnedXp += xp;
+        logXp(xp, `Studied for ${studyDiff} hours`);
       }
       
       const quranDiff = (newLog.quranPagesRead ?? 0) - (prev.quranPagesRead ?? 0);
       if (quranDiff > 0) {
-        earnedXp += quranDiff * XP_REWARDS.QURAN_PER_PAGE;
+        const xp = quranDiff * XP_REWARDS.QURAN_PER_PAGE;
+        earnedXp += xp;
+        logXp(xp, `Read ${quranDiff} pages of Qur'an`);
       }
       
       // Award only if it wasn't logged before
       if ((newLog.expenses ?? 0) > 0 && !(prev.expenses && prev.expenses > 0)) {
           earnedXp += XP_REWARDS.EXPENSE_LOGGED;
+          logXp(XP_REWARDS.EXPENSE_LOGGED, "Logged expenses");
       }
 
       if (newLog.abstained && !prev.abstained) {
           earnedXp += XP_REWARDS.ABSTAINED;
+          logXp(XP_REWARDS.ABSTAINED, "Abstained");
       }
 
       if (newLog.caloriesLogged && !prev.caloriesLogged) {
           earnedXp += XP_REWARDS.CALORIE_LOGGED;
+          logXp(XP_REWARDS.CALORIE_LOGGED, "Logged calories");
       }
 
       if (newLog.customHabits) {
@@ -230,7 +250,9 @@ export const processGamification = async ({
           Object.keys(newLog.customHabits).forEach(habitId => {
               // Award XP only if the habit is newly completed
               if (newLog.customHabits?.[habitId] && !prevHabits[habitId]) {
+                  const habitName = habits.find(h => h.id === habitId)?.name || 'a custom habit';
                   earnedXp += XP_REWARDS.CUSTOM_HABIT;
+                  logXp(XP_REWARDS.CUSTOM_HABIT, `Completed habit: ${habitName}`);
               }
           });
       }
@@ -247,6 +269,7 @@ export const processGamification = async ({
           const quest = penaltyQuestSnap.data() as UnexpectedQuest;
           if (!quest.isCompleted) {
               penaltyXp += XP_REWARDS.UNEXPECTED_QUEST_PENALTY;
+              logXp(XP_REWARDS.UNEXPECTED_QUEST_PENALTY, "Failed Unexpected Quest");
               transaction.update(penaltyQuestRef, { isCompleted: true }); // Mark as penalized to avoid double penalty
           }
       }
@@ -256,9 +279,14 @@ export const processGamification = async ({
       const yesterdayLogSnap = await transaction.get(yesterdayLogRef);
       if (!yesterdayLogSnap.exists()) {
           penaltyXp += XP_REWARDS.DAILY_QUEST_MISSED_PENALTY;
+          logXp(XP_REWARDS.DAILY_QUEST_MISSED_PENALTY, "Missed Daily Quest");
           penaltyXp += XP_REWARDS.CALORIE_LOG_MISSED_PENALTY;
+          logXp(XP_REWARDS.CALORIE_LOG_MISSED_PENALTY, "Missed Calorie Log");
+
           if(habits.length > 0) {
-            habitPenaltyXp += habits.length * XP_REWARDS.CUSTOM_HABIT_PENALTY;
+            const penalty = habits.length * XP_REWARDS.CUSTOM_HABIT_PENALTY;
+            habitPenaltyXp += penalty;
+            logXp(penalty, `Missed ${habits.length} habits`);
           }
       } else {
           const yesterdayLog = yesterdayLogSnap.data() as DailyLog;
@@ -268,16 +296,24 @@ export const processGamification = async ({
                               Object.values(yesterdayLog.customHabits ?? {}).some(Boolean);
           if (!questLogged) {
               penaltyXp += XP_REWARDS.DAILY_QUEST_MISSED_PENALTY;
+              logXp(XP_REWARDS.DAILY_QUEST_MISSED_PENALTY, "Missed Daily Quest");
           }
           if (!yesterdayLog.caloriesLogged) {
               penaltyXp += XP_REWARDS.CALORIE_LOG_MISSED_PENALTY;
+              logXp(XP_REWARDS.CALORIE_LOG_MISSED_PENALTY, "Missed Calorie Log");
           }
           if (habits.length > 0) {
+            let missedHabitCount = 0;
             habits.forEach(habit => {
                 if (!yesterdayLog.customHabits?.[habit.id]) {
-                    habitPenaltyXp += XP_REWARDS.CUSTOM_HABIT_PENALTY;
+                    missedHabitCount++;
                 }
             });
+            if (missedHabitCount > 0) {
+                const penalty = missedHabitCount * XP_REWARDS.CUSTOM_HABIT_PENALTY;
+                habitPenaltyXp += penalty;
+                logXp(penalty, `Missed ${missedHabitCount} habits`);
+            }
           }
       }
   }

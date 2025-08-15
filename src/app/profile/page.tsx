@@ -5,11 +5,11 @@ import { useState, useEffect, useMemo } from 'react';
 import withAuth from "@/components/with-auth";
 import { useAuth } from "@/context/auth-context";
 import { auth, db } from '@/lib/firebase';
-import { doc, onSnapshot, collection } from 'firebase/firestore';
-import type { UserProfile, UserReward, Reward, Rank } from '@/lib/types';
+import { doc, onSnapshot, collection, query, orderBy, limit } from 'firebase/firestore';
+import type { UserProfile, UserReward, Reward, Rank, XpEntry } from '@/lib/types';
 import { getLevel, getXpForLevel, XP_REWARDS, getRank } from '@/lib/gamification';
 import { ALL_REWARDS } from '@/lib/rewards';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow, formatRelative } from 'date-fns';
 import {
   Card,
   CardContent,
@@ -22,12 +22,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { User, Shield, CheckCircle, XCircle, LogOut, Award, MessageSquare, Star, Lock } from 'lucide-react';
+import { User, Shield, CheckCircle, XCircle, LogOut, Award, MessageSquare, Star, Lock, History, Plus, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import SafeImage from '@/components/SafeImage';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const rarityStyles = {
   common: {
@@ -80,7 +81,9 @@ function ProfilePage() {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [unlockedRewards, setUnlockedRewards] = useState<UserReward[]>([]);
+  const [xpHistory, setXpHistory] = useState<XpEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isXpHistoryLoading, setIsXpHistoryLoading] = useState(true);
 
   useEffect(() => {
     if (!user) {
@@ -103,9 +106,18 @@ function ProfilePage() {
       setUnlockedRewards(rewardsData);
     });
 
+    const xpHistoryRef = collection(db, 'users', user.uid, 'xpHistory');
+    const xpQuery = query(xpHistoryRef, orderBy('date', 'desc'), limit(15));
+    const unsubXpHistory = onSnapshot(xpQuery, (snapshot) => {
+        const historyData = snapshot.docs.map(doc => ({...doc.data(), id: doc.id} as XpEntry));
+        setXpHistory(historyData);
+        setIsXpHistoryLoading(false);
+    });
+
     return () => {
         unsubProfile();
         unsubRewards();
+        unsubXpHistory();
     };
   }, [user]);
 
@@ -182,95 +194,136 @@ function ProfilePage() {
           <TabsTrigger value="rules"><Shield className="mr-2" />System Commandments</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="info" className="mt-6 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Profile Details</CardTitle>
-              <CardDescription>Your personal stats and information.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                  <div className="space-y-4">
-                      <Skeleton className="h-10 w-full" />
-                      <Skeleton className="h-10 w-full" />
-                      <Skeleton className="h-10 w-full" />
-                  </div>
-              ) : (
-                <dl>
-                  <InfoRow label="UID" value={profile?.uid} />
-                  <InfoRow label="Joined System" value={profile?.createdAt ? format(profile.createdAt.toDate(), 'PPP') : 'N/A'} />
-                  <InfoRow label="Rank" value={currentRank.name} valueClassName={currentRank.color} />
-                  <div>
-                    <div className="flex justify-between items-baseline pt-4 mb-2">
-                        <span className="font-bold text-lg text-primary">Level {currentLevel}</span>
-                        <span className="text-sm text-muted-foreground">
-                        {profile?.xp ?? 0} / {xpForNextLevel} XP
-                        </span>
+        <TabsContent value="info" className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="md:col-span-2 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Profile Details</CardTitle>
+                <CardDescription>Your personal stats and information.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                    <div className="space-y-4">
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-10 w-full" />
                     </div>
-                    <Progress value={currentLevelProgress} className="h-3" />
-                  </div>
-                </dl>
-              )}
-            </CardContent>
-            <CardFooter>
-                <Button variant="outline" onClick={handleSignOut} className="w-full">
-                    <LogOut className="mr-2" />
-                    Sign Out
-                </Button>
-            </CardFooter>
-          </Card>
+                ) : (
+                  <dl>
+                    <InfoRow label="UID" value={profile?.uid} />
+                    <InfoRow label="Joined System" value={profile?.createdAt ? format(profile.createdAt.toDate(), 'PPP') : 'N/A'} />
+                    <InfoRow label="Rank" value={currentRank.name} valueClassName={currentRank.color} />
+                    <div>
+                      <div className="flex justify-between items-baseline pt-4 mb-2">
+                          <span className="font-bold text-lg text-primary">Level {currentLevel}</span>
+                          <span className="text-sm text-muted-foreground">
+                          {profile?.xp ?? 0} / {xpForNextLevel} XP
+                          </span>
+                      </div>
+                      <Progress value={currentLevelProgress} className="h-3" />
+                    </div>
+                  </dl>
+                )}
+              </CardContent>
+              <CardFooter>
+                  <Button variant="outline" onClick={handleSignOut} className="w-full">
+                      <LogOut className="mr-2" />
+                      Sign Out
+                  </Button>
+              </CardFooter>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>My Rewards</CardTitle>
-              <CardDescription>A collection of all rewards you've unlocked on your journey.</CardDescription>
-            </CardHeader>
-            <CardContent>
-               {isLoading ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {Array.from({ length: 4 }).map((_, i) => (
-                        <Card key={i}><CardContent className="p-4"><Skeleton className="h-24 w-full" /></CardContent></Card>
-                    ))}
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {combinedRewards.map(reward => {
-                    const styles = rarityStyles[reward.rarity];
-                    return (
-                      <Card
-                        key={reward.id}
-                        className={cn(
-                          'flex flex-col justify-between transition-all duration-300 h-full',
-                          reward.unlocked ? styles.card : 'border-dashed border-muted/20 bg-card/50',
-                          reward.unlocked ? styles.glow : ''
+            <Card>
+              <CardHeader>
+                <CardTitle>My Rewards</CardTitle>
+                <CardDescription>A collection of all rewards you've unlocked on your journey.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {Array.from({ length: 4 }).map((_, i) => (
+                          <Card key={i}><CardContent className="p-4"><Skeleton className="h-24 w-full" /></CardContent></Card>
+                      ))}
+                  </div>
+                ) : (
+                  <ScrollArea className="h-80">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pr-4">
+                    {combinedRewards.map(reward => {
+                      const styles = rarityStyles[reward.rarity];
+                      return (
+                        <Card
+                          key={reward.id}
+                          className={cn(
+                            'flex flex-col justify-between transition-all duration-300 h-full',
+                            reward.unlocked ? styles.card : 'border-dashed border-muted/20 bg-card/50',
+                            reward.unlocked ? styles.glow : ''
+                          )}
+                        >
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-3">
+                              {reward.unlocked ? getRewardIcon(reward.type) : <Lock className="size-8 text-muted-foreground/50" />}
+                              <span className={cn("text-base", !reward.unlocked && 'text-muted-foreground/50')}>{reward.name}</span>
+                            </CardTitle>
+                            <CardDescription className={cn("text-xs",!reward.unlocked && 'text-muted-foreground/30')}>
+                              {reward.description}
+                            </CardDescription>
+                          </CardHeader>
+                          <CardFooter className="flex justify-between items-center">
+                            <Badge className={cn('capitalize', reward.unlocked ? styles.badge : 'bg-muted/30 text-muted-foreground/50 border-transparent')}>
+                                  {reward.rarity}
+                              </Badge>
+                              {reward.unlockedAt && (
+                                  <p className="text-xs text-muted-foreground">
+                                    Unlocked {formatDistanceToNow(reward.unlockedAt.toDate(), { addSuffix: true })}
+                                  </p>
+                              )}
+                          </CardFooter>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                  </ScrollArea>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="md:col-span-1">
+             <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><History /> XP History</CardTitle>
+                    <CardDescription>Your recent XP gains and losses.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <ScrollArea className="h-[500px] pr-2">
+                        {isXpHistoryLoading ? (
+                            <div className="space-y-3">
+                                {Array.from({length: 5}).map((_, i) => <Skeleton key={i} className="w-full h-10" />)}
+                            </div>
+                        ) : xpHistory.length > 0 ? (
+                            <ul className="space-y-4">
+                                {xpHistory.map(entry => (
+                                    <li key={entry.id} className="flex items-center justify-between text-sm">
+                                        <div className="flex items-center gap-3 flex-1">
+                                            {entry.amount > 0 ? <Plus className="size-4 text-green-500" /> : <Minus className="size-4 text-red-500" />}
+                                            <div className="flex-1">
+                                                <p className="text-foreground truncate">{entry.reason}</p>
+                                                <p className="text-xs text-muted-foreground">{formatRelative(entry.date.toDate(), new Date())}</p>
+                                            </div>
+                                        </div>
+                                        <span className={cn("font-bold", entry.amount > 0 ? 'text-green-500' : 'text-red-500')}>
+                                            {entry.amount > 0 ? '+' : ''}{entry.amount}
+                                        </span>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <p className="text-sm text-center text-muted-foreground py-8">No XP history yet.</p>
                         )}
-                      >
-                        <CardHeader>
-                          <CardTitle className="flex items-center gap-3">
-                            {reward.unlocked ? getRewardIcon(reward.type) : <Lock className="size-8 text-muted-foreground/50" />}
-                            <span className={cn("text-base", !reward.unlocked && 'text-muted-foreground/50')}>{reward.name}</span>
-                          </CardTitle>
-                          <CardDescription className={cn("text-xs",!reward.unlocked && 'text-muted-foreground/30')}>
-                            {reward.description}
-                          </CardDescription>
-                        </CardHeader>
-                        <CardFooter className="flex justify-between items-center">
-                           <Badge className={cn('capitalize', reward.unlocked ? styles.badge : 'bg-muted/30 text-muted-foreground/50 border-transparent')}>
-                                {reward.rarity}
-                            </Badge>
-                            {reward.unlockedAt && (
-                                 <p className="text-xs text-muted-foreground">
-                                   Unlocked {formatDistanceToNow(reward.unlockedAt.toDate(), { addSuffix: true })}
-                                 </p>
-                            )}
-                        </CardFooter>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    </ScrollArea>
+                </CardContent>
+             </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="rules" className="mt-6">
