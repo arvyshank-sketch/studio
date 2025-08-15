@@ -54,7 +54,7 @@ import { HabitManager } from '@/components/habit-manager';
 
 const logSchema = z.object({
   studyDuration: z.coerce.number().min(0).optional(),
-  quranPagesRead: z.coerce.number().min(0).optional(),
+  bookPagesRead: z.coerce.number().min(0).optional(),
   expenses: z.preprocess(
     (val) => (val === '' ? undefined : Number(val)),
     z.number().min(0, 'Must be a positive number').max(1000000, "Please enter a reasonable expense amount.").optional()
@@ -76,13 +76,13 @@ const studyOptions = [
     { value: 4, label: '4 hours' },
 ];
 
-const quranOptions = [
-    { value: 1, label: '1 Page' },
-    { value: 3, label: '3 Pages' },
+const bookOptions = [
     { value: 5, label: '5 Pages' },
     { value: 10, label: '10 Pages' },
     { value: 15, label: '15 Pages' },
-    { value: 20, label: "One Juz'" }, // One Juz is ~20 pages
+    { value: 20, label: '20 Pages' },
+    { value: 30, label: '30 Pages' },
+    { value: 50, label: "50 Pages" },
 ];
 
 function DailyLogPage() {
@@ -103,7 +103,7 @@ function DailyLogPage() {
     resolver: zodResolver(logSchema),
     defaultValues: {
         studyDuration: 0,
-        quranPagesRead: 0,
+        bookPagesRead: 0,
         expenses: undefined,
         abstained: false,
         notes: '',
@@ -218,7 +218,7 @@ function DailyLogPage() {
               }, {} as Record<string, boolean>)
 
               const isQuestCompleted = (logData.studyDuration ?? 0) > 0 ||
-                                     (logData.quranPagesRead ?? 0) > 0 ||
+                                     (logData.bookPagesRead ?? 0) > 0 ||
                                      (logData.expenses ?? 0) > 0 ||
                                      logData.abstained ||
                                      Object.values(logData.customHabits ?? {}).some(Boolean);
@@ -259,7 +259,7 @@ function DailyLogPage() {
     const logData: DailyLog = {
       date: today,
       studyDuration: data.studyDuration || 0,
-      quranPagesRead: data.quranPagesRead || 0,
+      bookPagesRead: data.bookPagesRead || 0,
       expenses: data.expenses || 0,
       abstained: data.abstained || false,
       notes: data.notes || '',
@@ -411,17 +411,17 @@ function DailyLogPage() {
                                 />
                                  <FormField
                                     control={form.control}
-                                    name="quranPagesRead"
+                                    name="bookPagesRead"
                                     render={({ field }) => (
                                         <FormItem className="space-y-3">
-                                            <FormLabel className="flex items-center gap-2"><BookOpen /> Qur'an Read</FormLabel>
+                                            <FormLabel className="flex items-center gap-2"><BookOpen /> Book Reading</FormLabel>
                                             <FormControl>
                                                 <RadioGroup
                                                 onValueChange={(value) => field.onChange(parseInt(value))}
                                                 value={field.value?.toString()}
                                                 className="flex flex-wrap gap-x-6 gap-y-4"
                                                 >
-                                                {quranOptions.map(option => (
+                                                {bookOptions.map(option => (
                                                     <FormItem key={option.value} className="flex items-center space-x-2 space-y-0">
                                                         <FormControl>
                                                             <RadioGroupItem value={option.value.toString()} />

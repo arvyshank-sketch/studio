@@ -107,7 +107,7 @@ function DashboardPage() {
             const logData = dailyLogSnap.data() as DailyLog | undefined;
             const questCompleted = logData && (
                 (logData.studyDuration ?? 0) > 0 ||
-                (logData.quranPagesRead ?? 0) > 0 ||
+                (logData.bookPagesRead ?? 0) > 0 ||
                 logData.abstained ||
                 Object.values(logData.customHabits ?? {}).some(Boolean)
             );
@@ -289,7 +289,7 @@ function DashboardPage() {
         return {
           date: format(date, 'MMM d'),
           study: logForDay?.studyDuration || 0,
-          quran: logForDay?.quranPagesRead || 0,
+          book: logForDay?.bookPagesRead || 0,
           expenses: logForDay?.expenses || 0,
           calories: totalCalories,
         };
@@ -672,11 +672,11 @@ function DashboardPage() {
             </Card>
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Book /> Quran Progress</CardTitle>
-                    <CardDescription>Daily quran progress for the last 7 days.</CardDescription>
+                    <CardTitle className="flex items-center gap-2"><Book /> Book Reading Progress</CardTitle>
+                    <CardDescription>Daily book reading progress for the last 7 days.</CardDescription>
                 </CardHeader>
                  <CardContent className="h-[300px] w-full pr-4">
-                    {isLoading ? ( <Loader2 className="size-8 animate-spin text-primary mx-auto" /> ) : chartData.some(d => d.quran > 0) ? (
+                    {isLoading ? ( <Loader2 className="size-8 animate-spin text-primary mx-auto" /> ) : chartData.some(d => d.book > 0) ? (
                     <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={chartData}>
                             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" />
@@ -684,12 +684,12 @@ function DashboardPage() {
                             <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
                             <Tooltip content={<CustomTooltip unit=" pgs"/>} />
                             <defs>
-                                <linearGradient id="colorQuran" x1="0" y1="0" x2="0" y2="1">
+                                <linearGradient id="colorBook" x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="5%" stopColor="hsl(var(--chart-4))" stopOpacity={0.8}/>
                                     <stop offset="95%" stopColor="hsl(var(--chart-4))" stopOpacity={0}/>
                                 </linearGradient>
                             </defs>
-                            <Area type="monotone" dataKey="quran" name="Quran" stroke="hsl(var(--chart-4))" fill="url(#colorQuran)" />
+                            <Area type="monotone" dataKey="book" name="Book" stroke="hsl(var(--chart-4))" fill="url(#colorBook)" />
                         </AreaChart>
                     </ResponsiveContainer>
                     ) : ( <ChartPlaceholder /> )}

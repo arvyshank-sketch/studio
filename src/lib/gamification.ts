@@ -11,7 +11,7 @@ const LEVEL_GROWTH_FACTOR = 1.2; // Each level requires 20% more XP than the las
 
 export const XP_REWARDS = {
   STUDY_PER_30_MIN: 5,
-  QURAN_PER_PAGE: 1,
+  BOOK_PER_PAGE: 1,
   EXPENSE_LOGGED: 5,
   ABSTAINED: 30,
   CUSTOM_HABIT: 15,
@@ -95,9 +95,9 @@ export const badges: Badge[] = [
     icon: Book,
   },
   {
-    id: 'quran-1',
-    name: 'Quran Reader',
-    description: 'Read 100 pages of the Quran.',
+    id: 'bookworm-1',
+    name: 'Bookworm',
+    description: 'Read 500 pages in any book.',
     icon: Calendar,
   },
 ];
@@ -146,9 +146,9 @@ const checkScholar1 = (ctx: BadgeCheckContext): boolean => {
   return totalStudyHours >= 10;
 };
 
-const checkQuran1 = (ctx: BadgeCheckContext): boolean => {
-  const totalPagesRead = ctx.allLogs.reduce((sum, log) => sum + (log.quranPagesRead || 0), 0);
-  return totalPagesRead >= 100;
+const checkBookworm1 = (ctx: BadgeCheckContext): boolean => {
+  const totalPagesRead = ctx.allLogs.reduce((sum, log) => sum + (log.bookPagesRead || 0), 0);
+  return totalPagesRead >= 500;
 };
 
 
@@ -156,7 +156,7 @@ const badgeChecks: { [key: string]: (ctx: BadgeCheckContext) => boolean } = {
   'first-log': checkFirstLog,
   '7-day-streak': check7DayStreak,
   'scholar-1': checkScholar1,
-  'quran-1': checkQuran1,
+  'bookworm-1': checkBookworm1,
 };
 
 
@@ -222,11 +222,11 @@ export const processGamification = async ({
         logXp(xp, `Studied for ${studyDiff} hours`);
       }
       
-      const quranDiff = (newLog.quranPagesRead ?? 0) - (prev.quranPagesRead ?? 0);
-      if (quranDiff > 0) {
-        const xp = quranDiff * XP_REWARDS.QURAN_PER_PAGE;
+      const bookDiff = (newLog.bookPagesRead ?? 0) - (prev.bookPagesRead ?? 0);
+      if (bookDiff > 0) {
+        const xp = bookDiff * XP_REWARDS.BOOK_PER_PAGE;
         earnedXp += xp;
-        logXp(xp, `Read ${quranDiff} pages of Qur'an`);
+        logXp(xp, `Read ${bookDiff} pages`);
       }
       
       // Award only if it wasn't logged before
@@ -291,7 +291,7 @@ export const processGamification = async ({
       } else {
           const yesterdayLog = yesterdayLogSnap.data() as DailyLog;
           const questLogged = (yesterdayLog.studyDuration ?? 0) > 0 || 
-                              (yesterdayLog.quranPagesRead ?? 0) > 0 || 
+                              (yesterdayLog.bookPagesRead ?? 0) > 0 || 
                               yesterdayLog.abstained || 
                               Object.values(yesterdayLog.customHabits ?? {}).some(Boolean);
           if (!questLogged) {

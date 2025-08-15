@@ -17,7 +17,7 @@ export type MealEntry = {
 export type DailyLog = {
     date: string;
     studyDuration: number;
-    quranPagesRead: number;
+    bookPagesRead: number;
     expenses: number;
     abstained: boolean;
     notes?: string;
