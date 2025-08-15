@@ -16,6 +16,7 @@ const rajdhani = Rajdhani({
 export const metadata: Metadata = {
   title: 'Synergy',
   description: 'Track your life. Achieve your goals.',
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({
